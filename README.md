@@ -3,7 +3,7 @@
 - 3D LIDAR Data curation, preprocess and analysis
 - Application of ML models for Point Classification and Catenaria regression fit
 
-
+-----------------------------------------------------------------------------------
 - ## Objetivos principales:
 
 1. #### Dar una nota a cada VANO --> definir criterios juntos
@@ -50,14 +50,14 @@
 
     - Specific literature:
 
-        https://idus.us.es/handle/11441/128964
-        https://crea.ujaen.es/bitstream/10953.1/14012/1/Memoria%20-%20Segmentacion%20inteligente%20de%20objetos%20en%20nubes%20de%20puntos.pdf
-        https://repositorio.unal.edu.co/handle/unal/78223
-        https://www.mdpi.com/2072-4292/15/9/2371
-        https://www.researchgate.net/publication/354251923_Classification_of_high-voltage_power_line_structures_in_low_density_ALS_data_acquired_over_broad_non-urban_areas
-        https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8444095/
-        https://www.sciencedirect.com/science/article/pii/S2405896323009291
-        https://www.mdpi.com/2072-4292/11/22/2600
+        - https://idus.us.es/handle/11441/128964
+        - https://crea.ujaen.es/bitstream/10953.1/14012/1/Memoria%20-%20Segmentacion%20inteligente%20de%20objetos%20en%20nubes%20de%20puntos.pdf
+        - https://repositorio.unal.edu.co/handle/unal/78223
+        - https://www.mdpi.com/2072-4292/15/9/2371
+        - https://www.researchgate.net/publication/354251923_Classification_of_high-voltage_power_line_structures_in_low_density_ALS_data_acquired_over_broad_non-urban_areas
+        - https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8444095/
+        - https://www.sciencedirect.com/science/article/pii/S2405896323009291
+        - https://www.mdpi.com/2072-4292/11/22/2600
 
 3. #### Code examples and libraries
 
