@@ -3,6 +3,8 @@
 - 3D LIDAR Data curation, preprocess and analysis
 - Application of ML models for Point Classification and Catenaria regression fit
 
+  Preguntas: https://docs.google.com/document/d/13Um_0wgUGBLbGws6rkAb4e86pBjA_p_IMFoog77eHFU/edit?usp=sharing
+
 -----------------------------------------------------------------------------------
 - ## Objetivos principales:
 
