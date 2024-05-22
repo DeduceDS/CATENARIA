@@ -239,8 +239,5 @@ def scale_conductor(X):
     return X_scaled
 
 
-
-path = "../data/"
-
-with open(path+'vanos.json', 'r') as archivo:
-    data = json.load(archivo)
+# if __name__ == "__main__":
+#     main()
