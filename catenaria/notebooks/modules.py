@@ -203,8 +203,8 @@ def rotate_vano(cond_values, extremos_values, apoyo_values, vert_values):
 def clean_outliers(rotated_conds, rotated_extremos):
 
     # Get top and bottom extreme values
-    top = np.max([rotated_extremos.T[1][2],rotated_extremos.T[3][2]])
-    bottom = np.max([rotated_extremos.T[0][2],rotated_extremos.T[2][2]])
+    # top = np.max([rotated_extremos.T[1][2],rotated_extremos.T[3][2]])
+    # bottom = np.max([rotated_extremos.T[0][2],rotated_extremos.T[2][2]])
 
     #Get left and right extreme values
     left = np.max([rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
@@ -212,16 +212,56 @@ def clean_outliers(rotated_conds, rotated_extremos):
 
     # Filter points within the specified boundaries
     cropped_conds = rotated_conds[:, (right > rotated_conds[1,:]) & (rotated_conds[1,:] > left)]
-    cropped_conds = cropped_conds[:, (top > cropped_conds[2,:]) & (cropped_conds[2,:] > bottom)]
-    # Calcular percentiles 1 y 99
+    # cropped_conds = cropped_conds[:, (top > cropped_conds[2,:]) & (cropped_conds[2,:] > bottom)]
+        
+    # Paso 1: Calcular el histograma de las coordenadas Y
+    hist, bin_edges = np.histogram(cropped_conds[1, :], bins=200)
 
-    p1 = np.percentile(cropped_conds[1, :], 1)
+    # Paso 2: Identificar los picos significativos en ambos extremos del histograma
+    # Definir un umbral para considerar un pico significativo
+    threshold_density = np.mean(hist) + 2 * np.std(hist)
+
+    # Encontrar el bin con la mayor cantidad de puntos en la parte superior
+    peak_bin_upper = np.argmax(hist[:len(hist)//2])
+    # Encontrar el bin con la mayor cantidad de puntos en la parte inferior
+    peak_bin_lower = np.argmax(hist[len(hist)//2:]) + len(hist)//2
+
+    # Inicializar los umbrales
+    threshold_y_upper = None
+    threshold_y_lower = None
+
+    # print(hist[peak_bin_upper], hist[peak_bin_lower])
+    # plt.hist(cropped_conds[1, :])
+    
+    # Verificar si hay una línea horizontal significativa en la parte superior
+    if hist[peak_bin_upper] > threshold_density:
+        threshold_y_upper = bin_edges[peak_bin_upper + 1]  # El +1 es para obtener el borde superior del bin
+        print(f"Umbral de corte inferior detectado: {threshold_y_upper}")
+
+    # Verificar si hay una línea horizontal significativa en la parte inferior
+    if hist[peak_bin_lower] > threshold_density:
+        threshold_y_lower = bin_edges[peak_bin_lower]  # No se necesita ajustar más
+        print(f"Umbral de corte superior detectado: {threshold_y_lower}")
+
+    # Paso 3: Filtrar los puntos usando los umbrales detectados
+    if threshold_y_upper is not None:
+        cropped_conds = cropped_conds[:, cropped_conds[1, :] > threshold_y_upper]
+
+    if threshold_y_lower is not None:
+        cropped_conds = cropped_conds[:, cropped_conds[1, :] < threshold_y_lower]
+        
+    # Calcular percentiles 1 y 99
+    p1 = np.percentile(cropped_conds[1, :], 2)
     p99 = np.percentile(cropped_conds[1, :], 98)
 
-    # Filtrar los datos para eliminar el 1% de los puntos con menor y mayor coordenada X
+    # Filtrar los datos para eliminar el 5% de los puntos con menor y mayor coordenada Y
     cropped_conds = cropped_conds[:,(cropped_conds[1, :] > p1) & (cropped_conds[1, :] < p99)]
-
-    print(f"Número de puntos después de eliminar los extremos: {(rotated_conds.shape[1])} vs {(cropped_conds.shape[1])}")
+        
+    # Erase X axis outliers
+    p1 = np.percentile(cropped_conds[0, :], 2)
+    p99 = np.percentile(cropped_conds[0, :], 98)
+    
+    cropped_conds = cropped_conds[:,(cropped_conds[0, :] > p1) & (cropped_conds[0, :] < p99)]
     
     return cropped_conds
 
@@ -230,11 +270,13 @@ def scale_conductor(X):
     # Normalizzazione dei valori di x e y
     scaler_y = StandardScaler()
     scaler_x = StandardScaler()
+    scaler_z = StandardScaler()
 
     y_vals_scaled = scaler_y.fit_transform(X[1,:].reshape(-1, 1)).flatten()
     x_vals_scaled = scaler_x.fit_transform(X[0,:].reshape(-1, 1)).flatten()  # Flatten per curve_fit
-
-    X_scaled = np.array([x_vals_scaled, y_vals_scaled])
+    z_vals_scaled = scaler_z.fit_transform(X[2,:].reshape(-1, 1)).flatten()
+    
+    X_scaled = np.array([x_vals_scaled, y_vals_scaled, z_vals_scaled])
     
     return X_scaled
 
