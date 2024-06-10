@@ -63,9 +63,18 @@ def get_coord(points):
 
 def get_coord2(extremos_apoyos):
     
-    x_vals = [extremos_apoyos[0]["COORDENADA_X"], extremos_apoyos[0]["COORDENADA_X"], extremos_apoyos[1]["COORDENADA_X"], extremos_apoyos[1]["COORDENADA_X"]]
-    y_vals = [extremos_apoyos[0]["COORDEANDA_Y"], extremos_apoyos[0]["COORDEANDA_Y"], extremos_apoyos[1]["COORDEANDA_Y"], extremos_apoyos[1]["COORDEANDA_Y"]]
-    z_vals = extremos_apoyos[0]["COORDENADAS_Z"] + extremos_apoyos[1]["COORDENADAS_Z"]
+    x_vals = []
+    y_vals = []
+    z_vals = []
+    
+    for i in range(len(extremos_apoyos)):
+        
+        z_vals.append(extremos_apoyos[i]["COORDENADAS_Z"])
+    
+    for i in range(len(extremos_apoyos)):
+        
+        x_vals = x_vals + [extremos_apoyos[i]["COORDENADA_X"], extremos_apoyos[i]["COORDENADA_X"]]
+        y_vals = y_vals + [extremos_apoyos[i]["COORDEANDA_Y"], extremos_apoyos[i]["COORDEANDA_Y"]]
 
     return np.stack(x_vals), np.stack(y_vals), np.stack(z_vals)
 

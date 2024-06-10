@@ -1,0 +1,40 @@
+
+Vanos incompletos:
+
+- G_13645875_13645996
+  Los 3 conductores están incompletos a pesar de tener puntos lidar
+- G_13037116_13511437
+  Faltan los 3 conductores. Practicamente no hay puntos
+- G_13037116_13645737
+  Faltan los 3 conductores. Practicamente no hay puntos
+- G_13645871_13645951
+  Los 3 conductores están incompletos a pesar de tener puntos lidar
+- G_13645681_13645990
+  Faltan los 3 conductores. Practicamente no hay puntos
+- G_13645862_13645986
+  Los 3 conductores están incompletos
+- G_13645821_13645862
+  Faltan los 3 conductores. Practicamente no hay puntos
+- G_13645946_13645982
+  Los 3 conductores están incompletos
+- G_13088932_13149467
+  Los 3 conductores están incompletos
+- G_13645720_13645976
+  Los 3 conductores están incompletos
+- G_13645666_13645811
+  Los 3 conductores están incompletos
+- G_13088936_13145989
+  Los 3 conductores están incompletos
+- G_13645800_13645927
+  Faltan los 3 conductores. Practicamente no hay puntos
+- G_13645843_13645881
+  Los 3 conductores están incompletos
+- G_13645790_13645962
+  Le falta un trozo a dos de los conductores
+- G_13645645_13645918
+  Los 3 conductores están incompletos
+
+
+Otros casos:
+  - G_13618881_13645911, G_13618881_13645690, G_13645910_13645997, G_13645910_13645956
+  La forma en la que los conductores se unen al apoyo es diferente en cada extremo del vano (es correcto)

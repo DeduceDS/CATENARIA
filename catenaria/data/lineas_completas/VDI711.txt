@@ -1,0 +1,26 @@
+
+Vanos incompletos:
+
+- C_13434448_13434449
+  Falta un extremo de los 3 conductores
+ 
+- C_13411888_13411891
+  Falta un trozo en el medio de 2 conductores
+
+- C_13411767_13411770
+  A un conductor le falta un trozo en el extremo
+
+- C_13411767_13411776
+  A un conductor le falta un trozo en el extremo
+
+- C_13411775_13411776
+  Solo hay un conductor completo
+
+- C_13411824_13411828
+  Falta un trozo en el medio de los 3 conductores
+
+
+Otros casos:
+
+- C_13412064_13412065, C_13412051_13412064, C_13412143_13412144, C_13412141_13412144, C_13412101_13412104,C_13412104_13412105
+  La forma en la que los conductores se unen al apoyo es diferente en cada extremo del vano (es correcto)
