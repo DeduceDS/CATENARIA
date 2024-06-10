@@ -71,3 +71,15 @@
         - Clustering: https://www.kaggle.com/code/mohamedhbaieb/p2m-3d-point-cloud#Reading-Functions-data-domfountain_station1
 
         - Point Reconstruction (Autoencoder): https://www.kaggle.com/code/horsek/transformer-based-autoencoder-for-3d-point-cloud
+     
+-----------------------------------------------------------------------------------------------------------------------------------------
+
+- Short Problem 1 - Visualizar la linea y seleccionar vecinos cercanos
+
+En el siguiente conjunto de datos en json, podemos encontrar más de 120 vanos eléctricos con las coordenadas de sus apoyos y las de sus conductores medidas con LIDAR. Las coordenadas de los apoyos también están en formato cartografiado que es más fiable a priori. El primer objetivo es visualizar y procesar los apoyos de cada uno de los vanos y determinar la distribución de la linea. Después, hay que definir una funcón de distancia euclidea y calcular la distancia del primer apoyo de cada vano con respecto a los demás. Finalmente, para cada vano hay que ordenar los demás vanos por distancia ascendente y seleccionar a los 5 vecinos más proximos de cada uno por distancia y guardarlos.
+
+- Short Problem 2 - Ajuste por asociación 
+
+Dado el conjunto de vanos electricos y una lista de los 5 vecinos cercanos correspondientes para cada uno, ahora el objetivo es realizar un ajuste por proximidad. Mediante los módulos de preprocesado, rotación, segmentación y clustering extraer los conductores aislados de cada vano y preparar el conjunto de datos para un ajuste de catenaria o similar. A continuación realizar un ajuste sobre cada conductor aislado y guardar el conjunto de parámetros correspondiente para cada uno en una lista, en grupos de 3 conductores por vano. Finalmente visualizar los parámetros de las catenarias y guardarlos. 
+
+------------------------------------------------------------------------------------------------------------------------------------------
