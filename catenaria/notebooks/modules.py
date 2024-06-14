@@ -24,6 +24,7 @@ from sklearn.mixture import GaussianMixture
 
 from scipy.optimize import curve_fit
 
+import math
 
 def print_element(element):
     
@@ -68,11 +69,11 @@ def get_coord2(extremos_apoyos):
     z_vals = []
     
     for i in range(len(extremos_apoyos)):
-        
-        z_vals.append(extremos_apoyos[i]["COORDENADAS_Z"])
+        # z_vals.append(extremos_apoyos[i]["COORDENADAS_Z"])
+        z_vals = z_vals + extremos_apoyos[i]["COORDENADAS_Z"]     
     
     for i in range(len(extremos_apoyos)):
-        
+    
         x_vals = x_vals + [extremos_apoyos[i]["COORDENADA_X"], extremos_apoyos[i]["COORDENADA_X"]]
         y_vals = y_vals + [extremos_apoyos[i]["COORDEANDA_Y"], extremos_apoyos[i]["COORDEANDA_Y"]]
 
@@ -172,7 +173,7 @@ def get_distances(extremos_values):
 def rotate_points(points, extremos_values):
     
     points = np.array(points).T
-
+    
     extremo1 = np.array(extremos_values).T[0]  # Extremo superior del primer poste
     extremo2 = np.array(extremos_values).T[2]  # Extremo inferior del primer poste
     
@@ -290,5 +291,116 @@ def scale_conductor(X):
     return X_scaled
 
 
+def distance(pt1, pt2):
+    
+    x1, y1, z1 = pt1
+    x2, y2, z2 = pt2
+    
+    distancia = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
+    
+    return distancia
+
+
+
+def initialize_centroids(points, n_clusters):
+    
+    centroids = np.zeros((n_clusters))
+    
+    centroids[0] = np.min(points[0,:])
+    centroids[1] = np.mean(points[0,:])
+    centroids[2] = np.max(points[0,:])
+    
+    return centroids
+
+def assign_clusters(points, centroids):
+    distances = np.abs(points[0][:, None] - centroids)
+    return np.argmin(distances, axis=1)
+
+def update_centroids(points, labels, n_clusters):
+    new_centroids = np.zeros(n_clusters)
+    for i in range(n_clusters):
+        cluster_points = points[0, labels == i]
+        if cluster_points.size > 0:
+            new_centroids[i] = np.mean(cluster_points)
+    return new_centroids
+
+def kmeans_clustering(points, n_clusters, max_iterations):
+    centroids = initialize_centroids(points, n_clusters)
+    for iteration in range(max_iterations):
+        labels = assign_clusters(points, centroids)
+        new_centroids = update_centroids(points, labels, n_clusters)
+        if np.allclose(new_centroids, centroids):
+            # print(f"Convergence reached at iteration {iteration}")
+            break
+        centroids = new_centroids
+    return labels, centroids
+
+
+def catenaria(x, a, h, k):
+    x = np.asarray(x).flatten()
+    r=a * np.cosh((x - h) / a) + k
+    return r
+
+
+def fit_vano(data,sublist=[]):
+
+    parameters=[]
+    incomplete_vanos = []
+    for i in range(len(data)):
+        
+        print(f"\nProcessing Vano {i}")
+
+        idv=data[i]['ID_VANO']
+        if idv in sublist:
+                
+            cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
+            
+            cond_values=np.vstack(cond_values)
+            apoyo_values=np.vstack(apoyo_values)
+
+            if np.array(extremos_values).shape[1]==4:
+                rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
+                
+                cropped_conds = clean_outliers(rotated_conds, rotated_extremos)
+                
+                X_scaled = scale_conductor(cropped_conds)
+
+                labels, centroids = kmeans_clustering(X_scaled, n_clusters=3, max_iterations=1000)
+                
+                total_points = X_scaled.shape[1]
+
+                parameters_vano=[]
+                for lab in np.unique(labels):
+                    
+                    clust = X_scaled[:,labels == lab]
+                    proportion = clust.shape[1]/total_points
+
+                    if proportion< 0.15:
+                        if idv not in incomplete_vanos:
+                            incomplete_vanos.append(idv)
+                        print(f"Error en el cluster {idv}")
+                        print(f"This cluster represents: {round(100*proportion,2)}%")
+                    else:
+                        y_vals = clust[1].reshape(-1, 1)
+                        z_vals = clust[2].reshape(-1, 1)
+                        initial_params = [1, 0, 0]  # a, h, k
+                        try:
+                            optim_params, _ = curve_fit(catenaria, y_vals.flatten(), z_vals.flatten(), p0=initial_params, method = 'lm')
+                            fitted_z = catenaria(y_vals.flatten(), *optim_params)
+                            if idv not in incomplete_vanos:
+                                parameters_vano.append(optim_params)
+                        except:
+                            if idv not in incomplete_vanos:
+                                incomplete_vanos.append(idv)
+            else:
+                incomplete_vanos.append(idv)
+            
+            if idv not in incomplete_vanos:
+                parameters.append([idv]+parameters_vano)
+
+    return parameters,incomplete_vanos
+
 # if __name__ == "__main__":
 #     main()
+
+
