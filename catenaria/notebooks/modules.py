@@ -448,63 +448,99 @@ def pretreatment_linegroup(parameters):
     
     return dfd
 
-def plot_linegroup_parameters(dfd):
+def plot_linegroup_parameters(dfd,lbl):
+    total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
+
     for ai in  ['A1','B1','C1']:
         mn=dfd[ai].mean()
         plt.hist(dfd[ai],label=ai,alpha=0.5,density=True)
         plt.axvline(mn, color='red', linestyle='--', linewidth=1)
-    plt.xlim(-10,10)
+    plt.xlim(total.min(),total.max())
     plt.legend()
-    plt.title('3 Lines Distribution')
+    plt.title(f'3 Lines Distribution, cluster {lbl}')
     plt.show()
-    total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
 
     mn=total.mean()
     plt.hist(total)
-    plt.xlim(-10,10)
+    plt.xlim(total.min(),total.max())
     plt.axvline(mn, color='red', linestyle='--', linewidth=1)
-    plt.title('All lines')
+    plt.title(f'All lines, cluster {lbl}')
     plt.show()
 
 
-def group_vanos(data,k=10):
+def group_net(data,k=10):
+
     ids_single_backing,X=data_middlepoints(data)
+    
+    scaler=StandardScaler()
+    X=scaler.fit_transform(X.loc[:,['x','y']])
+    X=pd.DataFrame(X,columns=['x','y'])
+    
     neighbors = NearestNeighbors(n_neighbors=k)
-    neighbors_fit = neighbors.fit(X.loc[:,['x','y']])
-    distances, indices = neighbors_fit.kneighbors(X.loc[:,['x','y']])
+    neighbors_fit = neighbors.fit(X)
+    distances, indices = neighbors_fit.kneighbors(X)
 
     distances = np.sort(distances[:, k-1], axis=0)
     second_derivative = np.diff(distances, n=5)
     inflection_point = np.argmax(second_derivative) + 1 
     dbscan = DBSCAN(eps=distances[inflection_point], min_samples=k, algorithm = "auto")  # Ajusta eps y min_samples según tus datos
-    labels = dbscan.fit_predict(X.loc[:,['x','y']])
+    labels = dbscan.fit_predict(X)
 
     return labels
 
+
+def plot_net(data,labels,k=10):
+
+    ids_single_backing,X=data_middlepoints(data)
+    plt.figure(figsize=(8, 6))
+
+    # Plot the points and connect them with a line
+    scatter =plt.scatter(X['x'], X['y'], marker='o', c=labels, cmap='viridis', label = labels)
+
+    # for i, label in enumerate(labels):
+    #     plt.annotate(i, (X.iloc[i,0], y.iloc[i,1]), textcoords="offset points", xytext=(0,10), ha='center')
+
+    # Add labels and title
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.title('Sequential Points Connected by a Line')
+    # Show the plot
+    handles, _ = scatter.legend_elements()
+
+    plt.legend(handles, np.unique(labels), title="Labels")
+    plt.grid(True)
+    plt.show()
 
 def plot_full_net(data,labels):
 
     ids_single_backing,X=data_middlepoints(data)
     
     fulldata_plot=[]
+    print(f'LEN {np.unique(labels)}')
     for lbl in np.unique(labels):
-        print(len(X.loc[labels==lbl,'ids'].to_list()))
+        
         idval_subg=X.loc[labels==lbl,'ids'].to_list()
+        
         parameters,incomplete_vanos=fit_vano(data,sublist=idval_subg)
-        print(parameters)
+        
         dfd=pretreatment_linegroup(parameters)
-        print(f'\nVanos analizados:{len(parameters)-dfd.shape[0]}')
+        
+        print(f'\nVanos analizados:{dfd.shape[0]}')
         print(f'Vanos perdidos:{len(parameters)-dfd.shape[0]}\n')
-        plot_linegroup_parameters(dfd)
+        plot_linegroup_parameters(dfd,str(lbl))
         total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
         fulldata_plot.append(total)
 
+    mins=[]
+    maxs=[]
     for ils,lbl in enumerate(np.unique(labels)):
         plt.hist(fulldata_plot[ils],label=lbl,alpha=0.5,density=True)
+        mins.append(fulldata_plot[ils].min())
+        maxs.append(fulldata_plot[ils].max())
 
-    plt.xlim(-10,10)
+    plt.xlim(min(mins)-0.2,max(maxs)+0.2)
     plt.legend()
-    plt.title('3 Lines Distribution')
+    plt.title('All Lines Distribution')
     plt.show()
 
 # if __name__ == "__main__":
