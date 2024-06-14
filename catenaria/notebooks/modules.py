@@ -26,6 +26,9 @@ from scipy.optimize import curve_fit
 
 import math
 
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+
 def print_element(element):
     
     for key in element.keys():
@@ -399,6 +402,33 @@ def fit_vano(data,sublist=[]):
                 parameters.append([idv]+parameters_vano)
 
     return parameters,incomplete_vanos
+
+def data_middlepoints(data):
+    x=[]
+    y=[]
+    ids_single_backing = []
+    ids = []
+    
+
+    for iel, el in enumerate(data):
+        if len(data[iel]['APOYOS']) >= 2:
+            ids.append(data[iel]['ID_VANO'])
+            y.append((data[iel]['APOYOS'][0]['COORDEANDA_Y'] + data[iel]['APOYOS'][1]['COORDEANDA_Y']) / 2)
+            x.append((data[iel]['APOYOS'][0]['COORDENADA_X'] + data[iel]['APOYOS'][1]['COORDENADA_X']) / 2)
+        elif len(data[iel]['APOYOS']) == 1:
+            ids_single_backing.append(data[iel]['ID_VANO'])
+            
+        else:
+            ids_single_backing.append(data[iel]['ID_VANO'])
+            print(f"Error: No se encontraron apoyos válidos para el elemento {iel}.")
+    
+    scaler_x=StandardScaler()
+    scaler_y=StandardScaler()
+    x=scaler_x.fit_transform(np.array(x).reshape(-1,1))
+    y=scaler_y.fit_transform(np.array(y).reshape(-1,1))
+    X=pd.DataFrame({'ids':ids,'x':x.flatten(),'y':y.flatten()})
+
+    return ids_single_backing,X
 
 # if __name__ == "__main__":
 #     main()
