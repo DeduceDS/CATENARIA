@@ -430,6 +430,83 @@ def data_middlepoints(data):
 
     return ids_single_backing,X
 
+def flatten_sublist(sublist):
+    flat_list = [sublist[0]] 
+    for array in sublist[1:]:
+        flat_list.extend(array.tolist()) 
+    return flat_list
+
+def pretreatment_linegroup(parameters):
+    flattened_data = [flatten_sublist(sublist) for sublist in parameters]
+    columns = ['ID', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']
+    df = pd.DataFrame(flattened_data, columns=columns)
+    dfd=df.dropna().copy()
+    for i in  [ 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']:
+        
+        IQR=dfd[i].quantile(0.75)-dfd[i].quantile(0.25)
+        dfd=dfd.loc[(dfd[i]>dfd[i].quantile(0.25)-1.5*IQR)&(dfd[i]<dfd[i].quantile(0.75)+1.5*IQR),:]
+    
+    return dfd
+
+def plot_linegroup_parameters(dfd):
+    for ai in  ['A1','B1','C1']:
+        mn=dfd[ai].mean()
+        plt.hist(dfd[ai],label=ai,alpha=0.5,density=True)
+        plt.axvline(mn, color='red', linestyle='--', linewidth=1)
+    plt.xlim(-10,10)
+    plt.legend()
+    plt.title('3 Lines Distribution')
+    plt.show()
+    total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
+
+    mn=total.mean()
+    plt.hist(total)
+    plt.xlim(-10,10)
+    plt.axvline(mn, color='red', linestyle='--', linewidth=1)
+    plt.title('All lines')
+    plt.show()
+
+
+def group_vanos(data,k=10):
+    ids_single_backing,X=data_middlepoints(data)
+    neighbors = NearestNeighbors(n_neighbors=k)
+    neighbors_fit = neighbors.fit(X.loc[:,['x','y']])
+    distances, indices = neighbors_fit.kneighbors(X.loc[:,['x','y']])
+
+    distances = np.sort(distances[:, k-1], axis=0)
+    second_derivative = np.diff(distances, n=5)
+    inflection_point = np.argmax(second_derivative) + 1 
+    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=k, algorithm = "auto")  # Ajusta eps y min_samples según tus datos
+    labels = dbscan.fit_predict(X.loc[:,['x','y']])
+
+    return labels
+
+
+def plot_full_net(data,labels):
+
+    ids_single_backing,X=data_middlepoints(data)
+    
+    fulldata_plot=[]
+    for lbl in np.unique(labels):
+        print(len(X.loc[labels==lbl,'ids'].to_list()))
+        idval_subg=X.loc[labels==lbl,'ids'].to_list()
+        parameters,incomplete_vanos=fit_vano(data,sublist=idval_subg)
+        print(parameters)
+        dfd=pretreatment_linegroup(parameters)
+        print(f'\nVanos analizados:{len(parameters)-dfd.shape[0]}')
+        print(f'Vanos perdidos:{len(parameters)-dfd.shape[0]}\n')
+        plot_linegroup_parameters(dfd)
+        total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
+        fulldata_plot.append(total)
+
+    for ils,lbl in enumerate(np.unique(labels)):
+        plt.hist(fulldata_plot[ils],label=lbl,alpha=0.5,density=True)
+
+    plt.xlim(-10,10)
+    plt.legend()
+    plt.title('3 Lines Distribution')
+    plt.show()
+
 # if __name__ == "__main__":
 #     main()
 
