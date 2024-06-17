@@ -351,6 +351,13 @@ def flatten_sublist(sublist):
         flat_list.extend(array.tolist()) 
     return flat_list
 
+def flatten_sublist_2(sublist):
+    flat_list = [sublist[0]] 
+    for array in sublist[1:-2]:
+        flat_list.extend(array.tolist()) 
+    flat_list.extend([sublist[-2]])
+    flat_list.extend([sublist[-1]])
+    return flat_list
 
 # def fit_data_parameters(data,sublist=[]):
 
@@ -430,8 +437,7 @@ def fit_vano_group(data,sublist=[]):
         print(f"\nProcessing Vano {i}")
 
         idv=data[i]['ID_VANO']
-        x=data[i]['APOYOS'][0]['COORDENADA_X']
-        y=data[i]['APOYOS'][1]['COORDEANDA_Y']
+        
         if idv in sublist:
                 
             cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
@@ -440,6 +446,8 @@ def fit_vano_group(data,sublist=[]):
             apoyo_values=np.vstack(apoyo_values)
 
             if np.array(extremos_values).shape[1]==4:
+                y=((data[i]['APOYOS'][0]['COORDEANDA_Y'] + data[i]['APOYOS'][1]['COORDEANDA_Y']) / 2)
+                x=((data[i]['APOYOS'][0]['COORDENADA_X'] + data[i]['APOYOS'][1]['COORDENADA_X']) / 2)
                 rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
                 
                 cropped_conds = clean_outliers(rotated_conds, rotated_extremos)
