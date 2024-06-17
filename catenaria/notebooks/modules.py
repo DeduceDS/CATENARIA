@@ -580,7 +580,7 @@ def pretreatment_linegroup(parameters):
         
         IQR=dfd[i].quantile(0.75)-dfd[i].quantile(0.25)
         dfd=dfd.loc[(dfd[i]>dfd[i].quantile(0.25)-1.5*IQR)&(dfd[i]<dfd[i].quantile(0.75)+1.5*IQR),:]
-    
+    dfd=dfd.reset_index()
     return dfd
 
 def plot_linegroup_parameters(dfd,lbl):
