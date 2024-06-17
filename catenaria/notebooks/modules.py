@@ -345,7 +345,79 @@ def catenaria(x, a, h, k):
     return r
 
 
-def fit_vano(data,sublist=[]):
+def flatten_sublist(sublist):
+    flat_list = [sublist[0]] 
+    for array in sublist[1:]:
+        flat_list.extend(array.tolist()) 
+    return flat_list
+
+
+def fit_data_parameters(data,sublist=[]):
+
+    parameters=[]
+    non_fitting = []
+    for i in range(len(data)):
+        
+        print(f"\nProcessing Vano {i}")
+
+        idv=data[i]['ID_VANO']
+        if idv in sublist:
+                
+            cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
+            
+            cond_values=np.vstack(cond_values)
+            apoyo_values=np.vstack(apoyo_values)
+
+            if np.array(extremos_values).shape[1]==4:
+                rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
+                
+                cropped_conds = clean_outliers(rotated_conds, rotated_extremos)
+                
+                X_scaled = scale_conductor(cropped_conds)
+
+                labels, centroids = kmeans_clustering(X_scaled, n_clusters=3, max_iterations=1000)
+                print(np.unique(labels))
+                total_points = X_scaled.shape[1]
+
+                parameters_vano=[]
+                for lab in np.unique(labels):
+                    idl=idv+'_'+str(lab)
+                    
+                    clust = X_scaled[:,labels == lab]
+                    proportion = clust.shape[1]/total_points
+
+                    if proportion< 0.15:
+                        if idl not in non_fitting:
+                            non_fitting.append(str(idl))
+                        print(f"Error en el cluster {idl}")
+                        print(f"This cluster represents: {round(100*proportion,2)}%")
+                    else:
+                        
+                        y_vals = np.append(clust[1].reshape(-1, 1),data[i]['APOYOS'][0]['COORDEANDA_Y'])
+                        z_vals = np.append(clust[2].reshape(-1, 1),data[i]['APOYOS'][0]['COORDEANDA_Y'])
+                        initial_params = [1, 0, 0]  # a, h, k
+                        try:
+                            optim_params, _ = curve_fit(catenaria, y_vals.flatten(), z_vals.flatten(), p0=initial_params, method = 'lm')
+                            fitted_z = catenaria(y_vals.flatten(), *optim_params)
+                            parameters_vano.append([str(idl)]+optim_params)
+                        except:
+                            if str(idl) not in non_fitting:
+                                non_fitting.append(str(idl))
+            else:
+                for el in [0,1,2]:
+                    non_fitting.append(idv+'_'+el)
+            
+            if idv not in non_fitting:
+                 parameters=parameters+parameters_vano
+
+    print(parameters)
+    columns = ['a', 'h', 'k']
+    parameters = pd.DataFrame(parameters, columns=columns)
+
+    return parameters,non_fitting
+
+
+def fit_vano_group(data,sublist=[]):
 
     parameters=[]
     incomplete_vanos = []
@@ -403,32 +475,201 @@ def fit_vano(data,sublist=[]):
 
     return parameters,incomplete_vanos
 
+
+
+# def fill_vano_group(data,sublist=[]):
+
+#     parameters=[]
+#     incomplete_vanos = []
+#     for i in range(len(data)):
+        
+#         print(f"\nProcessing Vano {i}")
+
+#         idv=data[i]['ID_VANO']
+#         if idv in sublist:
+                
+#             cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
+            
+#             cond_values=np.vstack(cond_values)
+#             apoyo_values=np.vstack(apoyo_values)
+
+#             if np.array(extremos_values).shape[1]==4:
+#                 rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
+                
+#                 cropped_conds = clean_outliers(rotated_conds, rotated_extremos)
+                
+#                 X_scaled = scale_conductor(cropped_conds)
+
+#                 labels, centroids = kmeans_clustering(X_scaled, n_clusters=3, max_iterations=1000)
+                
+#                 total_points = X_scaled.shape[1]
+
+#                 parameters_vano=[]
+#                 for lab in np.unique(labels):
+                    
+#                     clust = X_scaled[:,labels == lab]
+#                     proportion = clust.shape[1]/total_points
+
+#                     if proportion< 0.15:
+#                         if idv not in incomplete_vanos:
+#                             incomplete_vanos.append(idv)
+#                         print(f"Error en el cluster {idv}")
+#                         print(f"This cluster represents: {round(100*proportion,2)}%")
+#                     else:
+#                         y_vals = clust[1].reshape(-1, 1)
+#                         z_vals = clust[2].reshape(-1, 1)
+#                         initial_params = [1, 0, 0]  # a, h, k
+#                         try:
+#                             optim_params, _ = curve_fit(catenaria, y_vals.flatten(), z_vals.flatten(), p0=initial_params, method = 'lm')
+#                             fitted_z = catenaria(y_vals.flatten(), *optim_params)
+#                             if idv not in incomplete_vanos:
+#                                 parameters_vano.append(optim_params)
+#                         except:
+#                             if idv not in incomplete_vanos:
+#                                 incomplete_vanos.append(idv)
+#             else:
+#                 incomplete_vanos.append(idv)
+            
+#             if idv not in incomplete_vanos:
+#                 parameters.append([idv]+parameters_vano)
+
+#     return data
+
 def data_middlepoints(data):
     x=[]
     y=[]
-    ids_single_backing = []
+    ids_bad_backing = []
     ids = []
-    
-
     for iel, el in enumerate(data):
         if len(data[iel]['APOYOS']) >= 2:
             ids.append(data[iel]['ID_VANO'])
             y.append((data[iel]['APOYOS'][0]['COORDEANDA_Y'] + data[iel]['APOYOS'][1]['COORDEANDA_Y']) / 2)
             x.append((data[iel]['APOYOS'][0]['COORDENADA_X'] + data[iel]['APOYOS'][1]['COORDENADA_X']) / 2)
         elif len(data[iel]['APOYOS']) == 1:
-            ids_single_backing.append(data[iel]['ID_VANO'])
-            
+            ids.append(data[iel]['ID_VANO'])
+            y.append(data[iel]['APOYOS'][0]['COORDEANDA_Y'] )
+            x.append(data[iel]['APOYOS'][0]['COORDENADA_X'] )
         else:
-            ids_single_backing.append(data[iel]['ID_VANO'])
+            ids_bad_backing.append(data[iel]['ID_VANO'])
             print(f"Error: No se encontraron apoyos válidos para el elemento {iel}.")
-    
     scaler_x=StandardScaler()
     scaler_y=StandardScaler()
     x=scaler_x.fit_transform(np.array(x).reshape(-1,1))
     y=scaler_y.fit_transform(np.array(y).reshape(-1,1))
     X=pd.DataFrame({'ids':ids,'x':x.flatten(),'y':y.flatten()})
 
-    return ids_single_backing,X
+    return ids_bad_backing,X
+
+def pretreatment_linegroup(parameters):
+    flattened_data = [flatten_sublist(sublist) for sublist in parameters]
+    columns = ['ID', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']
+    df = pd.DataFrame(flattened_data, columns=columns)
+    dfd=df.dropna().copy()
+    for i in  [ 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']:
+        
+        IQR=dfd[i].quantile(0.75)-dfd[i].quantile(0.25)
+        dfd=dfd.loc[(dfd[i]>dfd[i].quantile(0.25)-1.5*IQR)&(dfd[i]<dfd[i].quantile(0.75)+1.5*IQR),:]
+    
+    return dfd
+
+def plot_linegroup_parameters(dfd,lbl):
+    total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
+
+    for ai in  ['A1','B1','C1']:
+        mn=dfd[ai].mean()
+        plt.hist(dfd[ai],label=ai,alpha=0.5,density=True)
+        plt.axvline(mn, color='red', linestyle='--', linewidth=1)
+    plt.xlim(total.min(),total.max())
+    plt.legend()
+    plt.title(f'3 Lines Distribution, cluster {lbl}')
+    plt.show()
+
+    mn=total.mean()
+    plt.hist(total)
+    plt.xlim(total.min(),total.max())
+    plt.axvline(mn, color='red', linestyle='--', linewidth=1)
+    plt.title(f'All lines, cluster {lbl}')
+    plt.show()
+
+
+def group_net(data,k=10):
+
+    ids_single_backing,X=data_middlepoints(data)
+    
+    scaler=StandardScaler()
+    X=scaler.fit_transform(X.loc[:,['x','y']])
+    X=pd.DataFrame(X,columns=['x','y'])
+    
+    neighbors = NearestNeighbors(n_neighbors=k)
+    neighbors_fit = neighbors.fit(X)
+    distances, indices = neighbors_fit.kneighbors(X)
+
+    distances = np.sort(distances[:, k-1], axis=0)
+    second_derivative = np.diff(distances, n=5)
+    inflection_point = np.argmax(second_derivative) + 1 
+    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=k, algorithm = "auto")  # Ajusta eps y min_samples según tus datos
+    labels = dbscan.fit_predict(X)
+
+    return labels
+
+
+def plot_net(data,labels,k=10):
+
+    ids_single_backing,X=data_middlepoints(data)
+    plt.figure(figsize=(8, 6))
+
+    # Plot the points and connect them with a line
+    scatter =plt.scatter(X['x'], X['y'], marker='o', c=labels, cmap='viridis', label = labels)
+
+    # for i, label in enumerate(labels):
+    #     plt.annotate(i, (X.iloc[i,0], y.iloc[i,1]), textcoords="offset points", xytext=(0,10), ha='center')
+
+    # Add labels and title
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.title('Sequential Points Connected by a Line')
+    # Show the plot
+    handles, _ = scatter.legend_elements()
+
+    plt.legend(handles, np.unique(labels), title="Labels")
+    plt.grid(True)
+    plt.show()
+
+def plot_full_net(data,labels):
+
+    ids_single_backing,X=data_middlepoints(data)
+    
+    fulldata_plot=[]
+    for lbl in np.unique(labels):
+        
+        idval_subg=X.loc[labels==lbl,'ids'].to_list()
+        
+        parameters,incomplete_vanos=fit_vano_group(data,sublist=idval_subg)
+        
+        dfd=pretreatment_linegroup(parameters)
+        
+        print(f'\nVanos con un sólo apoyo: {len(ids_single_backing)}')
+        print(f'Vanos incompletos: {len(incomplete_vanos)}')
+        print(f'Incompletos con apoyos: {len([el for el in incomplete_vanos if el not in ids_single_backing])}')
+        print(f'Sin apoyos y completos: {len([el for el in ids_single_backing if el not in incomplete_vanos])}')
+        print(f'Vanos analizados:{dfd.shape[0]}')
+        print(f'Vanos perdidos:{len(parameters)-dfd.shape[0]}\n')
+        
+        plot_linegroup_parameters(dfd,str(lbl))
+        total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
+        fulldata_plot.append(total)
+
+    mins=[]
+    maxs=[]
+    for ils,lbl in enumerate(np.unique(labels)):
+        plt.hist(fulldata_plot[ils],label=lbl,alpha=0.5,density=True)
+        mins.append(fulldata_plot[ils].min())
+        maxs.append(fulldata_plot[ils].max())
+
+    plt.xlim(min(mins)-0.2,max(maxs)+0.2)
+    plt.legend()
+    plt.title('All Lines Distribution')
+    plt.show()
 
 # if __name__ == "__main__":
 #     main()
