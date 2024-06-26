@@ -312,8 +312,10 @@ def initialize_centroids(points, n_clusters):
     centroids = np.zeros((n_clusters))
     
     centroids[0] = np.min(points[0,:])
-    centroids[1] = np.mean(points[0,:])
-    centroids[2] = np.max(points[0,:])
+    centroids[1] = np.max(points[0,:])
+    
+    if n_clusters > 2:
+        centroids[2] = np.mean(points[0,:])
     
     return centroids
 
