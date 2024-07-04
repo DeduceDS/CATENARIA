@@ -1143,11 +1143,12 @@ def fit_plot_vano_group(data,sublist=[],plot_filter="all",init=0,end=20,save=Fal
     return datafr
 
 
-def fit_plot_vano_group_2(data,sublist=[],plot_filter="all",init=0,end=20,save=False,label=''):
+def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=False,label=''):
     #filter= "bad_backing", bad_cluster, bad_line_number, bad_line_orientation, bad_fit, good_fit, empty
 
     if len(sublist)==0:
         sublist=[data[i]['ID_VANO'] for i in range(len(data))]
+    end=len(sublist) if end!=None else end
     parameters=[]
     incomplete_vanos = []
     incomplete_lines=[]
