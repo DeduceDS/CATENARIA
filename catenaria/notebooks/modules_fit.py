@@ -1,4 +1,3 @@
-
 import json
 import plotly.graph_objects as go
 from matplotlib.patches import Ellipse
@@ -30,6 +29,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn import metrics
 import open3d as o3d
 
+#### FUNCTIONS TO PROCESS JSON DATA ####
+
 def print_element(element):
 
     for key in element.keys():
@@ -57,7 +58,6 @@ def print_element(element):
         else:
             print(f"\n{key}: {element[key]}")
 
-
 def get_coord(points):
 
     x_vals = [punto[0] for punto in points]
@@ -83,7 +83,6 @@ def get_coord2(extremos_apoyos):
 
     return np.stack(x_vals), np.stack(y_vals), np.stack(z_vals)
 
-
 def extract_vano_values(data, vano):
 
     puntos_conductores = data[vano]['LIDAR']['CONDUCTORES']
@@ -105,6 +104,8 @@ def extract_vano_values(data, vano):
         vert_values.append(get_coord(element['VERTICES']))
 
     return cond_values, apoyo_values, vert_values, extremos_values
+
+#### FUNCTIONS TO PLOT DATA AND FITS ####
 
 def add_plot(fig, data, color, size, name, mode):
 
@@ -182,7 +183,6 @@ def plot_data(title,cond_values, apoyo_values, vert_values, extremos_values):
     # Agrega el gráfico para los extremos
     add_plot(fig, extremos_values, "black", 5, "Extremos", "markers")
 
-
     for vert in vert_values:
 
         # Agrega el gráfico para los vertices
@@ -201,7 +201,108 @@ def plot_data(title,cond_values, apoyo_values, vert_values, extremos_values):
 
     # Muestra el gráfico
     fig.show()
+    
+def plot_vano(title,X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values):
 
+    if len(labels)!=0:
+        plt.scatter(X_scaled.T[:, 0], X_scaled.T[:, 1], c=labels, cmap='viridis', label = labels)
+        plt.title('Clustering con kmeans')
+        plt.xlabel('X')
+        plt.ylabel('Y')
+
+        plt.tight_layout()
+        plt.title(title)
+        plt.show()
+
+        plt.scatter( X_scaled.T[:, 1], X_scaled.T[:, 2],c=labels, cmap='viridis', label = labels)
+        plt.title('Clustering con kmeans')
+        plt.xlabel('X')
+        plt.ylabel('Z')
+
+        plt.tight_layout()
+        plt.title(title)
+        plt.show()
+
+    plot_data(title,cond_values, apoyo_values, vert_values, extremos_values)
+    
+def plot_net(data,labels,k=10):
+
+    ids_single_backing,X=data_middlepoints(data)
+    plt.figure(figsize=(8, 6))
+
+    # Plot the points and connect them with a line
+    scatter =plt.scatter(X['x'], X['y'], marker='o', c=labels, cmap='viridis', label = labels)
+
+    # for i, label in enumerate(labels):
+    #     plt.annotate(i, (X.iloc[i,0], y.iloc[i,1]), textcoords="offset points", xytext=(0,10), ha='center')
+
+    # Add labels and title
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.title('Sequential Points Connected by a Line')
+    # Show the plot
+    handles, _ = scatter.legend_elements()
+
+    plt.legend(handles, np.unique(labels), title="Labels")
+    plt.grid(True)
+    plt.show()
+
+def plot_full_net(data,labels):
+
+    ids_single_backing,X=data_middlepoints(data)
+
+    fulldata_plot=[]
+    for lbl in np.unique(labels):
+
+        idval_subg=X.loc[labels==lbl,'ids'].to_list()
+
+        parameters,incomplete_vanos=fit_vano_group(data,sublist=idval_subg)
+
+        dfd=pretreatment_linegroup(parameters)
+
+        print(f'\nVanos con un sólo apoyo: {len(ids_single_backing)}')
+        print(f'Vanos incompletos: {len(incomplete_vanos)}')
+        print(f'Incompletos con apoyos: {len([el for el in incomplete_vanos if el not in ids_single_backing])}')
+        print(f'Sin apoyos y completos: {len([el for el in ids_single_backing if el not in incomplete_vanos])}')
+        print(f'Vanos analizados:{dfd.shape[0]}')
+        print(f'Vanos perdidos:{len(parameters)-dfd.shape[0]}\n')
+
+        plot_linegroup_parameters(dfd,str(lbl))
+        total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
+        fulldata_plot.append(total)
+
+    mins=[]
+    maxs=[]
+    for ils,lbl in enumerate(np.unique(labels)):
+        plt.hist(fulldata_plot[ils],label=lbl,alpha=0.5,density=True)
+        mins.append(fulldata_plot[ils].min())
+        maxs.append(fulldata_plot[ils].max())
+
+    plt.xlim(min(mins)-0.2,max(maxs)+0.2)
+    plt.legend()
+    plt.title('All Lines Distribution')
+    plt.show()
+
+def plot_linegroup_parameters(dfd,lbl):
+    total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
+
+    for ai in  ['A1','B1','C1']:
+        mn=dfd[ai].mean()
+        plt.hist(dfd[ai],label=ai,alpha=0.5,density=True)
+        plt.axvline(mn, color='red', linestyle='--', linewidth=1)
+    plt.xlim(total.min(),total.max())
+    plt.legend()
+    plt.title(f'3 Lines Distribution, cluster {lbl}')
+    plt.show()
+
+    mn=total.mean()
+    plt.hist(total)
+    plt.xlim(total.min(),total.max())
+    plt.axvline(mn, color='red', linestyle='--', linewidth=1)
+    plt.title(f'All lines, cluster {lbl}')
+    plt.show()
+
+#### FUNCTIONS TO COMPUTE DISTANCES ####
 
 def get_distances(extremos_values):
 
@@ -214,6 +315,19 @@ def get_distances(extremos_values):
     D3_apoyos_distance = np.sqrt((extremos_values[0][0] - extremos_values[0][2])**2 + (extremos_values[1][0] - extremos_values[1][2])**2 + (extremos_values[2][0] - extremos_values[2][2])**2)
 
     return x_apoyos_distance, y_apoyos_distance, xz_distance, xy_distance, yz_distance, D3_apoyos_distance
+
+def distance(pt1, pt2):
+
+    x1, y1, z1 = pt1
+    x2, y2, z2 = pt2
+
+    distancia = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
+
+    return distancia
+
+#### FUNCTIONS TO TRANSFORM/PREPROCESS 3D POINTS ####
+
+#### ROTATION FUNCTIONS ####
 
 def rotate_points(points, extremos_values):
 
@@ -266,6 +380,7 @@ def rotate_vano(cond_values, extremos_values, apoyo_values, vert_values):
 
     return mat,rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos
 
+#### OUTLIER FUNCTIONS ####
 
 def clean_outliers(rotated_conds, rotated_extremos):
 
@@ -332,7 +447,6 @@ def clean_outliers(rotated_conds, rotated_extremos):
 
     return cropped_conds
 
-
 def clean_outliers_2(rotated_conds):
 
     lx=pd.Series(rotated_conds[0,:]).quantile(0.25)
@@ -347,7 +461,6 @@ def clean_outliers_2(rotated_conds):
 
     return rotated_conds
 
-
 def clean_outliers_3(cropped_conds):
     nn = 10 # Local search
     std_multip = 1 # Not very sensitive
@@ -359,7 +472,6 @@ def clean_outliers_3(cropped_conds):
 
     cropped_conds = np.asarray(inlier_cloud.points).T
     return cropped_conds
-
 
 def clean_outliers_4(cropped_conds):
     nn = 10 # Local search
@@ -373,6 +485,7 @@ def clean_outliers_4(cropped_conds):
     cropped_conds = np.asarray(inlier_cloud.points).T
     return cropped_conds
 
+#### SCALE FUNCTIONS ####
 
 def scale_conductor(X):
 
@@ -390,7 +503,6 @@ def scale_conductor(X):
     return X_scaled,scaler_x,scaler_y,scaler_z
 
 
-
 def un_scale_conductor(X,scaler_x,scaler_y,scaler_z):
 
     y_vals_unscaled = scaler_y.inverse_transform(X[1,:].reshape(-1, 1)).flatten()
@@ -401,17 +513,89 @@ def un_scale_conductor(X,scaler_x,scaler_y,scaler_z):
 
     return X_unscaled
 
+#### FUNCTIONS TO MODIFY/CORRECT ORIGINAL DATA####
 
-def distance(pt1, pt2):
+def data_middlepoints(data):
+    x=[]
+    y=[]
+    ids_bad_backing = []
+    ids = []
+    for iel, el in enumerate(data):
+        if len(data[iel]['APOYOS']) >= 2:
+            ids.append(data[iel]['ID_VANO'])
+            y.append((data[iel]['APOYOS'][0]['COORDEANDA_Y'] + data[iel]['APOYOS'][1]['COORDEANDA_Y']) / 2)
+            x.append((data[iel]['APOYOS'][0]['COORDENADA_X'] + data[iel]['APOYOS'][1]['COORDENADA_X']) / 2)
+        elif len(data[iel]['APOYOS']) == 1:
+            ids.append(data[iel]['ID_VANO'])
+            y.append(data[iel]['APOYOS'][0]['COORDEANDA_Y'] )
+            x.append(data[iel]['APOYOS'][0]['COORDENADA_X'] )
+        else:
+            ids_bad_backing.append(data[iel]['ID_VANO'])
+            print(f"Error: No se encontraron apoyos válidos para el elemento {iel}.")
+    scaler_x=StandardScaler()
+    scaler_y=StandardScaler()
+    x=scaler_x.fit_transform(np.array(x).reshape(-1,1))
+    y=scaler_y.fit_transform(np.array(y).reshape(-1,1))
+    X=pd.DataFrame({'ids':ids,'x':x.flatten(),'y':y.flatten()})
 
-    x1, y1, z1 = pt1
-    x2, y2, z2 = pt2
+    return ids_bad_backing,X
 
-    distancia = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
+def define_backings(vano_length,apoyo_values):
+    """
+    Define the backings (extremos) based on the length of the span and the coordinates of the supports.
 
-    return distancia
+    This function clusters the support coordinates into two groups using k-means clustering, calculates
+    the center of mass for each group, and determines the coordinates of the backings. If the distance
+    between the centroids of the clusters significantly deviates from the provided span length, the
+    function returns -1 indicating an error.
 
+    Parameters:
+    vano_length (float): The length of the span (vano).
+    apoyo_values (list of lists or numpy.ndarray): The x, y, and z coordinates of the supports.
 
+    Returns:
+    list: A list containing three numpy arrays representing the x, y, and z coordinates of the backings
+        for each support. If the distance between centroids deviates significantly from the span length,
+        returns -1.
+    """
+    #args: vano_length, and apoyo_values
+    #returns: a coordinate list like [array([119842.5432, 119842.5432, 119934.9426, 119934.9426]), array([4695380.2077, 4695380.2077, 4695375.6154, 4695375.6154]), array([949.0614, 958.8735, 987.3561, 997.7533])]
+    points = np.array(apoyo_values)
+    print(points.shape)
+
+    kmeans = KMeans(n_clusters=2, max_iter=500, n_init="auto").fit(points.T)
+    labels=kmeans.labels_
+    extremos = []
+    # print(f"Distance between centroids: {abs(centroids[0] - centroids[1])}")
+
+    for lab in np.unique(labels):
+
+        apoyo = points[:, labels == lab]
+
+        mean_x = np.mean(apoyo[0,:])
+        mean_y = np.mean(apoyo[1,:])
+        mean_z = np.mean(apoyo[2,:])
+
+        c_mass = np.array([mean_x, mean_y, mean_z])
+        extremos.append(c_mass)
+
+    dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
+    extremos = np.array(extremos).T
+
+    extremos_values=[]
+    for ael in extremos:
+        l=[]
+        for bel in ael:
+            l=l+[bel,bel]
+        res=np.array(l)
+        extremos_values.append(res)
+
+    if 100*abs(dist - vano_length)/vano_length > 10.0:
+        extremos_values=-1
+
+    return extremos_values
+
+#### FUNCTIONS FOR CLUSTERING ####
 
 def initialize_centroids(points, n_clusters):
 
@@ -446,11 +630,123 @@ def kmeans_clustering(points, n_clusters, max_iterations):
         centroids = new_centroids
     return labels, centroids
 
-def catenaria(x, a, h, k):
-    x = np.asarray(x).flatten()
-    r=a * np.cosh((x - h) / a) + k
-    return r
+def group_dbscan_3(k,X_scaled):
+    """
+    Perform DBSCAN clustering on scaled data and calculate centroids for each cluster.
 
+    This function uses the DBSCAN algorithm to cluster the given scaled data. It first fits the k-nearest neighbors
+    to determine the distances and uses the second derivative of the sorted distances to find the inflection point,
+    which is used as the epsilon value for DBSCAN. The function then performs DBSCAN clustering, calculates the
+    centroids for each cluster, and returns the centroids and the cluster labels.
+
+    Parameters:
+    k (int): The number of neighbors to use for determining the optimal epsilon.
+    X_scaled (numpy.ndarray): The scaled x, y, and z coordinates of the data points.
+
+    Returns:
+    tuple: A tuple containing:
+        - centroids (list): A list of centroids for each cluster.
+        - labels (numpy.ndarray): The cluster labels assigned to each data point.
+    """
+
+    neighbors = NearestNeighbors(n_neighbors=k)
+    neighbors_fit = neighbors.fit(X_scaled)
+    distances, indices = neighbors_fit.kneighbors(X_scaled)
+
+    distances = np.sort(distances[:, k-1], axis=0)
+    second_derivative = np.diff(distances, n=5)
+    inflection_point = np.argmax(second_derivative) + 1
+
+    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=k, algorithm = "auto")  # Ajusta eps y min_samples según tus datos
+    labels = dbscan.fit_predict(X_scaled)
+
+    unique_labels = set(labels)
+    centroids = []
+    for label in unique_labels:
+        if label != -1:
+            cluster_points = X_scaled[labels == label]
+            centroid = cluster_points.mean(axis=0)
+            centroids.append(centroid)
+    centroids=[point.tolist() for point in centroids]
+
+    # centroids=flatten_sublist(centroids)
+    return centroids, labels
+
+
+def dbscan_find_clusters_3(X_scaled):
+    """
+    Find the optimal DBSCAN clustering for the given scaled data.
+
+    This function evaluates DBSCAN clustering with different values of k (number of neighbors)
+    to determine the optimal clustering configuration. It uses silhouette scores to assess the quality
+    of the clustering and selects the configuration with the highest score. The function then returns
+    the centroids of the clusters and the cluster labels.
+
+    Parameters:
+    X_scaled (numpy.ndarray): The scaled x, y, and z coordinates of the data points.
+
+    Returns:
+    tuple: A tuple containing:
+        - centroids (list): A list of centroids for each cluster.
+        - labels (numpy.ndarray): The cluster labels assigned to each data point.
+    """
+    
+    ar=[5,10,20]
+    for k in ar:
+
+        centroids,labels=group_dbscan_3(k,X_scaled.T)
+        if len(np.unique(labels))==1:
+            score=-1
+        else:
+            score=metrics.silhouette_score(X_scaled.T,labels)
+
+        if k==np.array(ar).min():
+            best_score=score
+            best_k=k
+        elif score>best_score:
+            best_score=score
+            best_k=k
+
+    centroids,labels=group_dbscan_3(best_k,X_scaled.T)
+
+    return centroids,labels
+
+def group_dbscan(k,X_scaled):
+
+    neighbors = NearestNeighbors(n_neighbors=k)
+    neighbors_fit = neighbors.fit(X_scaled)
+    distances, indices = neighbors_fit.kneighbors(X_scaled)
+
+    distances = np.sort(distances[:, k-1], axis=0)
+    second_derivative = np.diff(distances, n=5)
+    inflection_point = np.argmax(second_derivative) + 1
+
+    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=k, algorithm = "auto")  # Ajusta eps y min_samples según tus datos
+    labels = dbscan.fit_predict(X_scaled)
+
+    return labels
+
+def group_net(data,k=10):
+
+    ids_single_backing,X=data_middlepoints(data)
+
+    scaler=StandardScaler()
+    X=scaler.fit_transform(X.loc[:,['x','y']])
+    X=pd.DataFrame(X,columns=['x','y'])
+
+    neighbors = NearestNeighbors(n_neighbors=k)
+    neighbors_fit = neighbors.fit(X)
+    distances, indices = neighbors_fit.kneighbors(X)
+
+    distances = np.sort(distances[:, k-1], axis=0)
+    second_derivative = np.diff(distances, n=5)
+    inflection_point = np.argmax(second_derivative) + 1
+    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=k, algorithm = "auto")  # Ajusta eps y min_samples según tus datos
+    labels = dbscan.fit_predict(X)
+
+    return labels
+
+#### FUNCTIONS TO MANIPULATE ARRAYS ####
 
 def flatten_sublist(sublist):
     flat_list = [sublist[0]]
@@ -466,6 +762,35 @@ def flatten_sublist_2(sublist):
     flat_list.extend([sublist[-2]])
     flat_list.extend([sublist[-1]])
     return flat_list
+
+def clpt_to_array(cl_pt):
+    """
+    This function processes a list of coordinate points, extracts the x, y, and z coordinates,
+    and returns them as separate numpy arrays.
+
+    Parameters:
+    cl_pt (list of lists or tuples): A list where each element is a list or tuple containing
+                                    the x, y, and z coordinates of a point.
+    Returns:
+    numpy.ndarray: A 2D numpy array where the first row contains the x coordinates, the second row
+                contains the y coordinates, and the third row contains the z coordinates.
+    """
+    rfx=[]
+    rfy=[]
+    rfz=[]
+    print(cl_pt)
+    for el in cl_pt:
+        rfx.append(el[0])
+        rfy.append(el[1])
+        rfz.append(el[2])
+    return np.array([rfx,rfy,rfz])
+
+#### FUNCTIONS FOR DATA FITS ####
+
+def catenaria(x, a, h, k):
+    x = np.asarray(x).flatten()
+    r=a * np.cosh((x - h) / a) + k
+    return r
 
 def fit_data_parameters(data,sublist=[]):
 
@@ -527,8 +852,8 @@ def fit_data_parameters(data,sublist=[]):
                     non_fitting.append(idv+'_'+str(el))
 
             if idv not in non_fitting:
-                 labelsw=labelsw+labelsc
-                 parameters=parameters+parameters_vano
+                labelsw=labelsw+labelsc
+                parameters=parameters+parameters_vano
 
     columns = ['ID','a', 'h', 'k']
     parameters = pd.DataFrame(parameters, columns=columns)
@@ -603,130 +928,30 @@ def fit_vano_group(data,sublist=[]):
 
     return parameters,incomplete_vanos,incomplete_lines
 
-
-def group_dbscan_3(k,X_scaled):
-
-    neighbors = NearestNeighbors(n_neighbors=k)
-    neighbors_fit = neighbors.fit(X_scaled)
-    distances, indices = neighbors_fit.kneighbors(X_scaled)
-
-    distances = np.sort(distances[:, k-1], axis=0)
-    second_derivative = np.diff(distances, n=5)
-    inflection_point = np.argmax(second_derivative) + 1
-
-    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=k, algorithm = "auto")  # Ajusta eps y min_samples según tus datos
-    labels = dbscan.fit_predict(X_scaled)
-
-    unique_labels = set(labels)
-    centroids = []
-    for label in unique_labels:
-        if label != -1:
-            cluster_points = X_scaled[labels == label]
-            centroid = cluster_points.mean(axis=0)
-            centroids.append(centroid)
-    centroids=[point.tolist() for point in centroids]
-
-    # centroids=flatten_sublist(centroids)
-    return centroids, labels
-
-
-def dbscan_find_clusters_3(X_scaled):
-
-    ar=[5,10,20]
-    for k in ar:
-
-        centroids,labels=group_dbscan_3(k,X_scaled.T)
-        if len(np.unique(labels))==1:
-            score=-1
-        else:
-            score=metrics.silhouette_score(X_scaled.T,labels)
-
-        if k==np.array(ar).min():
-            best_score=score
-            best_k=k
-        elif score>best_score:
-            best_score=score
-            best_k=k
-
-    centroids,labels=group_dbscan_3(best_k,X_scaled.T)
-
-    return centroids,labels
-
-
-def plot_vano(title,X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values):
-
-    if len(labels)!=0:
-        plt.scatter(X_scaled.T[:, 0], X_scaled.T[:, 1], c=labels, cmap='viridis', label = labels)
-        plt.title('Clustering con kmeans')
-        plt.xlabel('X')
-        plt.ylabel('Y')
-
-        plt.tight_layout()
-        plt.title(title)
-        plt.show()
-
-        plt.scatter( X_scaled.T[:, 1], X_scaled.T[:, 2],c=labels, cmap='viridis', label = labels)
-        plt.title('Clustering con kmeans')
-        plt.xlabel('X')
-        plt.ylabel('Z')
-
-        plt.tight_layout()
-        plt.title(title)
-        plt.show()
-
-    plot_data(title,cond_values, apoyo_values, vert_values, extremos_values)
-
-def define_backings(vano_length,apoyo_values):
-    #args: vano_length, and apoyo_values
-    #returns: a coordinate list like [array([119842.5432, 119842.5432, 119934.9426, 119934.9426]), array([4695380.2077, 4695380.2077, 4695375.6154, 4695375.6154]), array([949.0614, 958.8735, 987.3561, 997.7533])]
-    points = np.array(apoyo_values)
-    print(points.shape)
-
-    kmeans = KMeans(n_clusters=2, max_iter=500, n_init="auto").fit(points.T)
-    labels=kmeans.labels_
-    extremos = []
-    # print(f"Distance between centroids: {abs(centroids[0] - centroids[1])}")
-
-    for lab in np.unique(labels):
-
-        apoyo = points[:, labels == lab]
-
-        mean_x = np.mean(apoyo[0,:])
-        mean_y = np.mean(apoyo[1,:])
-        mean_z = np.mean(apoyo[2,:])
-
-        c_mass = np.array([mean_x, mean_y, mean_z])
-        extremos.append(c_mass)
-
-    dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
-    extremos = np.array(extremos).T
-
-    extremos_values=[]
-    for ael in extremos:
-        l=[]
-        for bel in ael:
-            l=l+[bel,bel]
-        res=np.array(l)
-        extremos_values.append(res)
-
-    if 100*abs(dist - vano_length)/vano_length > 10.0:
-        extremos_values=-1
-
-    return extremos_values
-
-
-def clpt_to_array(cl_pt):
-    rfx=[]
-    rfy=[]
-    rfz=[]
-    print(cl_pt)
-    for el in cl_pt:
-        rfx.append(el[0])
-        rfy.append(el[1])
-        rfz.append(el[2])
-    return np.array([rfx,rfy,rfz])
-
 def fit_plot_vano_group(data,sublist=[],plot_filter="all",init=0,end=20,save=False,label=''):
+    """
+    Process, fit, and plot catenary parameters for a group of spans, and optionally save the results.
+
+    This function processes each span in the provided data, extracts relevant values for conductors,
+    supports, and endpoints, and performs a series of transformations and clustering to fit catenary
+    parameters to the data. It generates plots based on the specified filter criteria, which can be
+    "all", "bad_backing", "bad_cluster", "bad_line_number", "bad_line_orientation", "bad_fit", "good_fit", or "empty".
+    The function also provides the option to save the results to a JSON file.
+
+    Parameters:
+    data (list of dicts): The data containing information about different spans. Each dictionary should
+                            contain keys like 'ID_VANO', 'LIDAR', 'APOYOS', 'LONGITUD_2D', etc.
+    sublist (list): The list of IDs to be processed. Only spans with these IDs will be considered for fitting.
+    plot_filter (str): The filter criteria for plotting. Can be one of "all", "bad_backing", "bad_cluster",
+                            bad_line_number", "bad_line_orientation", "bad_fit", "good_fit", or "empty".
+    init (int): The starting index of the spans to be processed (default is 0).
+    end (int): The ending index of the spans to be processed (default is 20).
+    save (bool): Whether to save the results to a JSON file (default is False).
+    label (str): A label to be included in the filename if the results are saved.
+
+    Returns:
+    pd.DataFrame: A DataFrame containing the span IDs, flags indicating the fitting quality, and the number of lines detected.
+    """
     #filter= "bad_backing", bad_cluster, bad_line_number, bad_line_orientation, bad_fit, good_fit, empty
 
     if len(sublist)==0:
@@ -1001,45 +1226,7 @@ def fit_plot_vano_group(data,sublist=[],plot_filter="all",init=0,end=20,save=Fal
     datafr=pd.DataFrame(dataf)
     return datafr
 
-def group_dbscan(k,X_scaled):
-
-    neighbors = NearestNeighbors(n_neighbors=k)
-    neighbors_fit = neighbors.fit(X_scaled)
-    distances, indices = neighbors_fit.kneighbors(X_scaled)
-
-    distances = np.sort(distances[:, k-1], axis=0)
-    second_derivative = np.diff(distances, n=5)
-    inflection_point = np.argmax(second_derivative) + 1
-
-    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=k, algorithm = "auto")  # Ajusta eps y min_samples según tus datos
-    labels = dbscan.fit_predict(X_scaled)
-
-    return labels
-
-def data_middlepoints(data):
-    x=[]
-    y=[]
-    ids_bad_backing = []
-    ids = []
-    for iel, el in enumerate(data):
-        if len(data[iel]['APOYOS']) >= 2:
-            ids.append(data[iel]['ID_VANO'])
-            y.append((data[iel]['APOYOS'][0]['COORDEANDA_Y'] + data[iel]['APOYOS'][1]['COORDEANDA_Y']) / 2)
-            x.append((data[iel]['APOYOS'][0]['COORDENADA_X'] + data[iel]['APOYOS'][1]['COORDENADA_X']) / 2)
-        elif len(data[iel]['APOYOS']) == 1:
-            ids.append(data[iel]['ID_VANO'])
-            y.append(data[iel]['APOYOS'][0]['COORDEANDA_Y'] )
-            x.append(data[iel]['APOYOS'][0]['COORDENADA_X'] )
-        else:
-            ids_bad_backing.append(data[iel]['ID_VANO'])
-            print(f"Error: No se encontraron apoyos válidos para el elemento {iel}.")
-    scaler_x=StandardScaler()
-    scaler_y=StandardScaler()
-    x=scaler_x.fit_transform(np.array(x).reshape(-1,1))
-    y=scaler_y.fit_transform(np.array(y).reshape(-1,1))
-    X=pd.DataFrame({'ids':ids,'x':x.flatten(),'y':y.flatten()})
-
-    return ids_bad_backing,X
+#### FUNCTIONS TO POSTPROCESS FIT RESULTS ####
 
 def pretreatment_linegroup(parameters):
     flattened_data = [flatten_sublist(sublist) for sublist in parameters]
@@ -1053,9 +1240,22 @@ def pretreatment_linegroup(parameters):
     dfd=dfd.reset_index()
     return dfd
 
-
 def pretreatment_linegroup_from_json(df):
+    """
+    Preprocess and clean the parameters data for line groups from a DataFrame.
 
+    This function performs outlier removal on the DataFrame using the interquartile range (IQR) method.
+    It processes the columns 'a0', 'a1', and 'a2', and removes rows where the values fall outside of
+    1.5 times the IQR from the first and third quartiles. The cleaned DataFrame is then returned for
+    further analysis.
+
+    Parameters:
+    df (pd.DataFrame): A DataFrame containing the parameters for different line groups, including columns
+                    such as 'a0', 'a1', and 'a2'.
+    Returns:
+    pd.DataFrame: A cleaned DataFrame containing the parameters for different line groups, with
+                outliers removed and indices reset.
+    """
     dfd=df.dropna().copy()
     for i in  [  'a0', 'a1', 'a2']:
         IQR=dfd[i].quantile(0.75)-dfd[i].quantile(0.25)
@@ -1063,108 +1263,20 @@ def pretreatment_linegroup_from_json(df):
     dfd=dfd.reset_index()
     return dfd
 
-def plot_linegroup_parameters(dfd,lbl):
-    total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
-
-    for ai in  ['A1','B1','C1']:
-        mn=dfd[ai].mean()
-        plt.hist(dfd[ai],label=ai,alpha=0.5,density=True)
-        plt.axvline(mn, color='red', linestyle='--', linewidth=1)
-    plt.xlim(total.min(),total.max())
-    plt.legend()
-    plt.title(f'3 Lines Distribution, cluster {lbl}')
-    plt.show()
-
-    mn=total.mean()
-    plt.hist(total)
-    plt.xlim(total.min(),total.max())
-    plt.axvline(mn, color='red', linestyle='--', linewidth=1)
-    plt.title(f'All lines, cluster {lbl}')
-    plt.show()
-
-
-def group_net(data,k=10):
-
-    ids_single_backing,X=data_middlepoints(data)
-
-    scaler=StandardScaler()
-    X=scaler.fit_transform(X.loc[:,['x','y']])
-    X=pd.DataFrame(X,columns=['x','y'])
-
-    neighbors = NearestNeighbors(n_neighbors=k)
-    neighbors_fit = neighbors.fit(X)
-    distances, indices = neighbors_fit.kneighbors(X)
-
-    distances = np.sort(distances[:, k-1], axis=0)
-    second_derivative = np.diff(distances, n=5)
-    inflection_point = np.argmax(second_derivative) + 1
-    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=k, algorithm = "auto")  # Ajusta eps y min_samples según tus datos
-    labels = dbscan.fit_predict(X)
-
-    return labels
-
-
-def plot_net(data,labels,k=10):
-
-    ids_single_backing,X=data_middlepoints(data)
-    plt.figure(figsize=(8, 6))
-
-    # Plot the points and connect them with a line
-    scatter =plt.scatter(X['x'], X['y'], marker='o', c=labels, cmap='viridis', label = labels)
-
-    # for i, label in enumerate(labels):
-    #     plt.annotate(i, (X.iloc[i,0], y.iloc[i,1]), textcoords="offset points", xytext=(0,10), ha='center')
-
-    # Add labels and title
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
-    plt.title('Sequential Points Connected by a Line')
-    # Show the plot
-    handles, _ = scatter.legend_elements()
-
-    plt.legend(handles, np.unique(labels), title="Labels")
-    plt.grid(True)
-    plt.show()
-
-def plot_full_net(data,labels):
-
-    ids_single_backing,X=data_middlepoints(data)
-
-    fulldata_plot=[]
-    for lbl in np.unique(labels):
-
-        idval_subg=X.loc[labels==lbl,'ids'].to_list()
-
-        parameters,incomplete_vanos=fit_vano_group(data,sublist=idval_subg)
-
-        dfd=pretreatment_linegroup(parameters)
-
-        print(f'\nVanos con un sólo apoyo: {len(ids_single_backing)}')
-        print(f'Vanos incompletos: {len(incomplete_vanos)}')
-        print(f'Incompletos con apoyos: {len([el for el in incomplete_vanos if el not in ids_single_backing])}')
-        print(f'Sin apoyos y completos: {len([el for el in ids_single_backing if el not in incomplete_vanos])}')
-        print(f'Vanos analizados:{dfd.shape[0]}')
-        print(f'Vanos perdidos:{len(parameters)-dfd.shape[0]}\n')
-
-        plot_linegroup_parameters(dfd,str(lbl))
-        total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
-        fulldata_plot.append(total)
-
-    mins=[]
-    maxs=[]
-    for ils,lbl in enumerate(np.unique(labels)):
-        plt.hist(fulldata_plot[ils],label=lbl,alpha=0.5,density=True)
-        mins.append(fulldata_plot[ils].min())
-        maxs.append(fulldata_plot[ils].max())
-
-    plt.xlim(min(mins)-0.2,max(maxs)+0.2)
-    plt.legend()
-    plt.title('All Lines Distribution')
-    plt.show()
-
-
 def data_catenaryparameters_to_df(data):
+    """
+    Convert catenary parameters from the data into a DataFrame.
 
+    This function processes the provided data to extract catenary parameters for each span (vano).
+    It constructs a DataFrame containing the span ID and the parameters 'a0', 'a1', and 'a2'.
+    If a parameter is not present for a specific span, it is filled with NaN.
+
+    Parameters:
+    data (list of dicts): The data containing information about different spans. Each dictionary should
+                        contain keys like 'ID_VANO' and 'CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'.
+    Returns:
+    pd.DataFrame: A DataFrame containing the span IDs and the catenary parameters 'a0', 'a1', and 'a2'.
+    """
     parameters={'id':[],'a0':[],'a1':[],'a2':[]}
     for i in range(len(data)):
         parameters['id'].append(data[i]['ID_VANO'])
@@ -1176,7 +1288,5 @@ def data_catenaryparameters_to_df(data):
                 parameters['a'+str(k)].append(np.nan)
     
     return pd.DataFrame(parameters)
-# if __name__ == "__main__":
-#     main()
 
 
