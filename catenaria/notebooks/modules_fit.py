@@ -35,6 +35,8 @@ from sklearn.decomposition import PCA
 import statsmodels.api as sm
 from sklearn.linear_model import LinearRegression
 from sklearn.cluster import SpectralClustering
+from puntuacion import *
+
 
 def print_element(element):
     """
@@ -1596,6 +1598,7 @@ def clpt_to_array(cl_pt):
 
 
 def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=False,label=''):
+<<<<<<< Updated upstream
     """
     Processes a group of "vano" data entries, fits curves, and plots results based on various conditions and filters.
 
@@ -1625,6 +1628,9 @@ def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=Fa
     """
     
     #filter= "bad_backing", bad_cluster, bad_line_number, bad_line_orientation, bad_fit, good_fit, empty
+=======
+    #plot_filter= "bad_backing", bad_cluster, bad_line_number, bad_line_orientation, bad_fit, good_fit, empty
+>>>>>>> Stashed changes
 
     if len(sublist)==0:
         sublist=[data[i]['ID_VANO'] for i in range(len(data))]
@@ -1989,6 +1995,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
 
                 data[i]['CONDUCTORES_CORREGIDOS']={}
                 data[i]['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)']={}
+                data[i]['PUNTUACIONES']={}
 
                 if np.array(extremos_values).shape[1]!=4:
 
@@ -2107,11 +2114,11 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         y = []
                         z = []
 
-                        for i in range(len(X_cond)):
-                            if Y_cond[i] > np.min(Y_extremos) and Y_cond[i] < np.max(Y_extremos):
-                                x.append(X_cond[i])
-                                y.append(Y_cond[i])
-                                z.append(Z_cond[i])
+                        for j in range(len(X_cond)):
+                            if Y_cond[j] > np.min(Y_extremos) and Y_cond[j] < np.max(Y_extremos):
+                                x.append(X_cond[j])
+                                y.append(Y_cond[j])
+                                z.append(Z_cond[j])
 
                         x_cond = np.array(x)
                         y_cond = np.array(y)
@@ -2130,19 +2137,19 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         y1, y2, y3 = [], [], []
                         z1, z2, z3 = [], [], []
 
-                        for i in range(0, len(y_spectral)):
-                            if y_spectral[i] == 0:
-                                x1.append(X[i])
-                                y1.append(y[i])
-                                z1.append(z[i])
-                            if y_spectral[i] == 1:
-                                x2.append(X[i])
-                                y2.append(y[i])
-                                z2.append(z[i])
-                            if y_spectral[i] == 2:
-                                x3.append(X[i])
-                                y3.append(y[i])
-                                z3.append(z[i])
+                        for j in range(0, len(y_spectral)):
+                            if y_spectral[j] == 0:
+                                x1.append(X[j])
+                                y1.append(y[j])
+                                z1.append(z[j])
+                            if y_spectral[j] == 1:
+                                x2.append(X[j])
+                                y2.append(y[j])
+                                z2.append(z[j])
+                            if y_spectral[j] == 2:
+                                x3.append(X[j])
+                                y3.append(y[j])
+                                z3.append(z[j])
 
                         x1, y1, z1 = np.array(x1), np.array(y1), np.array(z1)
                         x2, y2, z2 = np.array(x2), np.array(y2), np.array(z2)
@@ -2264,9 +2271,9 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         x_fit1 = np.repeat(pd.Series(x1.flatten()).quantile(0.5),1000)
                         x_fit2 = np.repeat(pd.Series(x2.flatten()).quantile(0.5),1000)
                         x_fit3 = np.repeat(pd.Series(x3.flatten()).quantile(0.5),1000)
-                        print(x_pol1)
-                        print(y_pol1)
-                        print(x_fit1)
+                        # print(x_pol1)
+                        # print(y_pol1)
+                        # print(x_fit1)
                         fit1=np.vstack((x_fit1, x_pol1, y_pol1))
                         fit2=np.vstack((x_fit2, x_pol2, y_pol2))
                         fit3=np.vstack((x_fit3, x_pol3, y_pol3))
@@ -2280,10 +2287,15 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         mat_neg,fit1=un_rotate_points(fit1,mat)
                         mat_neg,fit2=un_rotate_points(fit2,mat)
                         mat_neg,fit3=un_rotate_points(fit3,mat)
+                        data[i]['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
+                        data[i]['CONDUCTORES_CORREGIDOS'][str(1)]=fit2.T.tolist()
+                        data[i]['CONDUCTORES_CORREGIDOS'][str(2)]=fit3.T.tolist()
+                        data[i]['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(0)]=parametros1
+                        data[i]['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(1)]=parametros2
+                        data[i]['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(2)]=parametros3
                         
                         fits = np.hstack((fit1,fit2,fit3))
                         good=1
-                        print('good')
                         # print(fits)
                         # print(fits.shape)
                         # print(cond_values)
@@ -2310,174 +2322,24 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         dataf['flag'].append('good_fit')
                         if any([plot_filter=='good_fit',plot_filter=='all']):
                             # plot_vano('{} Good_Fit{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                            print(cond_values[0])
-                            print(cond_values[1])
-                            print(cond_values[2])
+                            # print(cond_values[0])
+                            # print(cond_values[1])
+                            # print(cond_values[2])
                             plot_fit_2('{} Good_Fit{}'.format(idv,' '+finc[0]),cond_values, apoyo_values, vert_values,fits)
 
-# #                     labels,centroids=spectral_clustering(X_scaled,n_clusters=3,n_init=100)
-# #                     # labels, centroids = kmeans_clustering(X_scaled, n_clusters=3, max_iterations=1000)
-
-
-# #                     total_points = X_scaled.shape[1]
-
-# #                     parameters_vano=[]
-# #                     count_good=0
-# #                     bad_cluster=0
-# #                     bad_fit=0
-# #                     crl=[]
-
-                    
-# #                     if len(np.unique(labels))<3:
-# #                         bad_cluster=1
-
-# #                     for lab in np.unique(labels):
-
-# #                         idl=idv+'_'+str(lab)
-# #                         clust = X_scaled[:,labels == lab]
-# #                         # corr=np.corrcoef(clust[:1,:])
-# #                         # crl.append(corr)
-# #                         proportion = clust.shape[1]/total_points
-                        
-# #                         if proportion< 0.15:
-# #                             bad_cluster=1
-
-# #                         else:
-# #                             y_vals = clust[1,:].reshape(-1, 1)
-# #                             z_vals = clust[2,:].reshape(-1, 1)
-# #                             y_mean = np.mean(y_vals)
-# #                             y_range = np.max(y_vals) - np.min(y_vals)
-# #                             meanp=min(rotated_apoyos[1])+(max(rotated_apoyos[1])-min(rotated_apoyos[1]))/2
-                            
-# #                             initial_params = [1,0,0] # a, h, k
-                            
-# #                             try:
-                                    
-# #                                 optim_params, _ = curve_fit(catenaria, y_vals.flatten(), z_vals.flatten(), p0=initial_params, method = 'trf')
-
-# #                                 y_fit=np.linspace(rotated_ymin,rotated_ymax,1000).flatten()
-
-# #                                 z_fit = catenaria(y_fit, *optim_params)
-
-
-# #                                 # coefficients = np.polyfit(x_vals.flatten(), y_vals.flatten(), 1)
-# #                                 # linear_fit = np.poly1d(coefficients)
-# #                                 # slope, intercept=coefficients
-# #                                 # x_fit = invert_linear_model(y_fit, slope, intercept)
-# #                                 # ****model = LinearRegression()
-# #                                 # ****model.fit(x_vals, y_vals)
-# #                                 # ****slope = model.coef_[0][0]
-# #                                 # ****intercept = model.intercept_[0]
-# #                                 # ****x_fit = invert_linear_model(y_fit, slope, intercept)
-
-# #                                 x_fit = np.repeat(pd.Series(clust[0,:]).quantile(0.5),1000)
-# #                                 fit=np.vstack((x_fit, y_fit,z_fit))
-
-# #                                 fit=un_scale_conductor(fit,scaler_x,scaler_y,scaler_z)
-# #                                 # optim_params, _ = curve_fit(catenaria, fit[1,:].flatten(), fit[2,:].flatten(), p0=initial_params, method = 'trf')
-
-# #                                 apoyo_values_a=rotated_apoyos[:,rotated_apoyos[1,:]<(meanp)]
-# #                                 apoyo_values_b=rotated_apoyos[:,rotated_apoyos[1,:]>(meanp)]
-                                
-# #                                 tree = KDTree(fit.T)
-# #                                 distancesa, indicesa = tree.query(apoyo_values_a.T)
-# #                                 min_index = np.argmin(distancesa)
-# #                                 cl_pta=fit[:,indicesa[min_index]]
-                                
-# #                                 distancesb, indicesb = tree.query(apoyo_values_b.T)
-# #                                 min_index = np.argmin(distancesb)
-# #                                 cl_ptb=fit[:,indicesb[min_index]]
-            
-# #                                 fit=fit[:,(fit[1,:]>cl_pta[1])&(fit[1,:]<cl_ptb[1])]
-                                
-# #                                 # cl_pta=clpt_to_array(cl_pta)
-# #                                 # cl_ptb=clpt_to_array(cl_ptb)
-
-# #                                 y_fit=np.linspace(cl_pta[1],cl_ptb[1],1000).flatten()
-# #                                 y_fit=scaler_y.transform(y_fit.reshape(-1,1))
-                                
-
-# #                                 # coefficients = np.polyfit(x_vals.flatten(), y_vals.flatten(), 1)
-# #                                 # linear_fit = np.poly1d(coefficients)
-# #                                 # slope, intercept=coefficients
-# #                                 # x_fit = invert_linear_model(y_fit.flatten(), slope, intercept)
-# #                                 # ****x_fit = invert_linear_model(y_fit, slope, intercept)
-
-# #                                 z_fit = catenaria(y_fit, *optim_params)
-# #                                 x_fit = np.repeat(pd.Series(clust[0,:]).quantile(0.5),1000)
-# #                                 fit=np.vstack((x_fit.flatten(), y_fit.flatten(),z_fit.flatten()))
-                                
-# #                                 fit=un_scale_conductor(fit,scaler_x,scaler_y,scaler_z)
-                                
-# #                                 mat_neg,cl_pta=un_rotate_points(cl_pta,mat)
-# #                                 mat_neg,cl_ptb=un_rotate_points(cl_ptb,mat)
-# #                                 mat_neg,fit=un_rotate_points(fit,mat)
-                                
-# #                                 fits.append(fit)
-# #                                 crossesa.append(cl_pta)
-# #                                 crossesb.append(cl_ptb)
-# #                                 data[i]['CONDUCTORES_CORREGIDOS'][str(lab)]=fit.T.tolist()
-
-# #                                 # data[i]['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(lab)]=optim_params.tolist()
-                                
-# #                                 # print(data[i]['CONDUCTOR_CORREGIDO'][lab])
-# #                                 # print(data[i]['CONDUCTOR_CORREGIDO_PARAMETROS_(a,h,k)'][lab])
-# #                                 # print(indices[min_index])
-# #                                 # if corr>0.8:
-# #                                 count_good=count_good+1
-# #                                 # else:
-# #                                 #     bad_cluster=1
-                                
-# #                             except:
-# #                                 bad_fit=1
-
-# #                     fits = np.hstack(fits)
-# #                     # print(fits)
-# #                     # print(fits.shape)
-# #                     # print(cond_values)
-# #                     crossesa=np.vstack(crossesa).T#(crossesa[0],crossesa[1],crossesa[2])
-# #                     # print(crossesa)
-# #                     crossesb=np.vstack(crossesb).T#(crossesb[0],crossesb[1],crossesb[2])
-# #                     # print(crossesb)
-
-# #                     # print(f"{bad_cluster =}")
-# #                     # print(f"{bad_fit =}")
-# #                     # print(f"{count_good =}")
-
-# #                     if bad_cluster==1:
-# #                         if all([md==3,var_z_x]):
-# #                             dataf['flag'].append('bad_line_orientation')
-# #                             if any([plot_filter=='all',plot_filter=='bad_line_orientation']):
-# #                                 plot_vano('{} Bad_Orientation{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-# #                         else:
-# #                             dataf['flag'].append('bad_cluster')
-# #                             if any([plot_filter=='bad_cluster',plot_filter=='all']):
-# #                                 plot_vano('{} Incomplete_cluster{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-# #                     elif bad_fit==1:
-# #                         dataf['flag'].append('bad_fit')
-# #                         if any([plot_filter=='bad_fit',plot_filter=='all']):
-# #                             plot_vano('{} Bad_fit{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-# #                     elif count_good==3:
-# #                         dataf['flag'].append('good_fit')
-# #                         if any([plot_filter=='good_fit',plot_filter=='all']):
-# #                             # plot_vano('{} Good_Fit{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-# #                             plot_fit('{} Good_Fit{}'.format(idv,' '+finc[0]),cond_values, apoyo_values, vert_values,fits,crossesa,crossesb)
-
-#                             # plot_fit(f'{idv}',cond_values, apoyo_values, vert_values,fit)
-#     #             print(i+1)
-#     #             print(len(dataf['flag']))
-#     #             print(dataf['flag'][-1])
-#     # print(len(dataf['line_number']))
-#     # print(len(dataf['id']))
-#     # print(len(dataf['flag']))
-#     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-#     if save==True:
-#         with open(timestamp+'_'+label+'_resultado.json', 'w') as file:
-#             json.dump(data, file)
-
-#     datafr=pd.DataFrame(dataf)
-#     return datafr
-
+                puntuacion=puntuación_por_vanos(data, idv).to_json()
+                puntuacion_dict = json.loads(puntuacion)
+                for n in puntuacion_dict:
+                    puntuacion_dict[n]=puntuacion_dict[n]["0"]
+                puntuacion_dict['Continuidad']=finc[0]
+                puntuacion_dict['Conductores identificados']=dataf['line_number'][-1]
+                puntuacion_dict['Output']=dataf['flag'][-1]
+                del puntuacion_dict['Vano']
+                data[i]['PUNTUACIONES']=puntuacion_dict
+                print(puntuacion_dict)
+    return data
+                
+                
 def group_dbscan(k,X_scaled):
     """
     Perform DBSCAN clustering on scaled data, determining the optimal epsilon using the k-nearest neighbors method.

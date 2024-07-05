@@ -547,9 +547,9 @@ def rmse_suya_1(data, vano):
 
     return errorp1_suya, p_huecos
 
-def puntuación_por_vanos(pathdata, id_vano):
-    with open(pathdata, 'r') as archivo:
-        data = json.load(archivo)
+def puntuación_por_vanos(data, id_vano):
+    # with open(pathdata, 'r') as archivo:
+    #     data = json.load(archivo)
 
     clasificacion1 = {
         'Vano': [],
