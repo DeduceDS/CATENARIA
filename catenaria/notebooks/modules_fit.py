@@ -1598,7 +1598,6 @@ def clpt_to_array(cl_pt):
 
 
 def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=False,label=''):
-<<<<<<< Updated upstream
     """
     Processes a group of "vano" data entries, fits curves, and plots results based on various conditions and filters.
 
@@ -1628,13 +1627,11 @@ def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=Fa
     """
     
     #filter= "bad_backing", bad_cluster, bad_line_number, bad_line_orientation, bad_fit, good_fit, empty
-=======
-    #plot_filter= "bad_backing", bad_cluster, bad_line_number, bad_line_orientation, bad_fit, good_fit, empty
->>>>>>> Stashed changes
 
     if len(sublist)==0:
         sublist=[data[i]['ID_VANO'] for i in range(len(data))]
-    end=len(sublist) if end!=None else end
+    end=int(len(data)) if end==None else end
+    print(end)
     parameters=[]
     incomplete_vanos = []
     incomplete_lines=[]
@@ -1962,7 +1959,9 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
 
     if len(sublist)==0:
         sublist=[data[i]['ID_VANO'] for i in range(len(data))]
-    end=len(sublist) if end!=None else end
+        
+    end=int(len(data)) if end==None else end
+    
     parameters=[]
     incomplete_vanos = []
     incomplete_lines=[]
