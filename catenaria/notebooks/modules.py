@@ -714,7 +714,7 @@ def fit_vano_group(data,sublist=[]):
     return parameters,incomplete_vanos,incomplete_lines
 
 def plot_vano(title,X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values):
-    
+
     """
     This function generates scatter plots to visualize the clustering results on the x-y and y-z planes.
     It also generates a 3D plot of the conductor values, support values, vertices, and endpoints.
@@ -727,7 +727,6 @@ def plot_vano(title,X_scaled,labels,cond_values, apoyo_values, vert_values, extr
     apoyo_values (list of arrays): The original x, y, and z coordinates for supports.
     vert_values (list of lists of arrays): The original x, y, and z coordinates for vertices.
     extremos_values (list of arrays): The original x, y, and z coordinates for endpoints.
-
     """
 
     plt.scatter(X_scaled.T[:, 0], X_scaled.T[:, 1], c=labels, cmap='viridis', label = labels)
@@ -1103,8 +1102,9 @@ def pretreatment_linegroup(parameters):
 
     Returns:
     pd.DataFrame: A cleaned DataFrame containing the parameters for different line groups, with
-                outliers removed and indices reset.
+                outliers removed and indices reset.xº
     """
+    print(parameters)
     flattened_data = [flatten_sublist(sublist) for sublist in parameters]
     columns = ['ID', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']
     df = pd.DataFrame(flattened_data, columns=columns)
@@ -1235,7 +1235,7 @@ def plot_full_net(data,labels):
         
         idval_subg=X.loc[labels==lbl,'ids'].to_list()
         
-        parameters,incomplete_vanos=fit_vano_group(data,sublist=idval_subg)
+        parameters,incomplete_vanos,incomplete_lines=fit_vano_group(data,sublist=idval_subg)
         
         dfd=pretreatment_linegroup(parameters)
         
