@@ -1803,6 +1803,7 @@ def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=Fa
 
                                 z_fit = catenaria(y_fit, *optim_params)
 
+
                                 # coefficients = np.polyfit(x_vals.flatten(), y_vals.flatten(), 1)
                                 # linear_fit = np.poly1d(coefficients)
                                 # slope, intercept=coefficients
@@ -1815,8 +1816,6 @@ def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=Fa
 
                                 x_fit = np.repeat(pd.Series(clust[0,:]).quantile(0.5),1000)
                                 fit=np.vstack((x_fit, y_fit,z_fit))
-                                
-                                # rmse, corr = evaluate_fit(fit, X_scaled)
 
                                 fit=un_scale_conductor(fit,scaler_x,scaler_y,scaler_z)
                                 # optim_params, _ = curve_fit(catenaria, fit[1,:].flatten(), fit[2,:].flatten(), p0=initial_params, method = 'trf')
@@ -1967,11 +1966,6 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
     incomplete_vanos = []
     incomplete_lines=[]
     dataf = {'id': [], 'flag': [],'line_number':[]}
-    
-    rmses = []
-    maxes = []
-    correlations = []
-    
     for i in range(len(data)):
 
         if all([i>=init,i<=end]):
@@ -2007,11 +2001,11 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                     dataf['flag'].append('bad_backing')
                     dataf['line_number'].append(0)
                     if any([plot_filter=='all',plot_filter=='bad_backing']):
-                        continue
-                        # plot_vano(f'{idv} Bad_Backing',X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
+                        plot_vano(f'{idv} Bad_Backing',X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
                     # print(i+1)
                     # print(len(dataf['flag']))
                     # print(dataf['flag'][-1])
+                    continue
 
                 # print('bad_backing2')
 
@@ -2091,14 +2085,12 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                 if finc[0]=='incomplete':
                     dataf['flag'].append('empty')
                     if any([plot_filter=='all',plot_filter=='empty']):
-                        # plot_vano('{} Empty{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                        pass
+                        plot_vano('{} Empty{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
 
                 elif md!=3:
                     dataf['flag'].append('bad_line_number')
                     if any([plot_filter=='all',plot_filter=='bad_line_number']):
-                        # plot_vano('{} Bad_Line_Number{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                        pass
+                        plot_vano('{} Bad_Line_Number{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
 
                 else:
 
@@ -2106,6 +2098,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         # Matriz de rotación
                         mat, rotated_conds = rotate_points(cond_values, extremos_values)
                         extremos_values = mat.dot(extremos_values)
+
 
                         X_extremos = extremos_values[0]
                         Y_extremos = extremos_values[1]
@@ -2134,6 +2127,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         [X, y] = [x_cond.reshape(-1, 1), y_cond.reshape(-1, 1)]
 
                         model = SpectralClustering(n_clusters=3, affinity='nearest_neighbors', random_state=0)
+
 
                         y_spectral = model.fit_predict(X)
 
@@ -2180,17 +2174,12 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         x_filt_cond1, y_filt_cond1, z_filt_cond1 = x1[f_ind1], y1[f_ind1], z1[f_ind1]
                         x_filt_cond2, y_filt_cond2, z_filt_cond2 = x2[f_ind2], y2[f_ind2], z2[f_ind2]
                         x_filt_cond3, y_filt_cond3, z_filt_cond3 = x3[f_ind3], y3[f_ind3], z3[f_ind3]
-                        
 
                         # Función de la catenaria
                         from sklearn.preprocessing import StandardScaler
                         from scipy.optimize import curve_fit
-                        
-                        # def catenaria(x, a, h, k):
-                        #     return a*np.cosh((x-h)/a)+k
-                        
-                        def catenaria(x, a, b, c, d):
-                            return a + b*x + c*x**2 + d*x**3
+                        def catenaria(x, a, h, k):
+                            return a*np.cosh((x-h)/a)+k
 
                         y_vals1 = y_filt_cond1.reshape(-1, 1)
                         z_vals1 = z_filt_cond1.reshape(-1, 1)
@@ -2213,9 +2202,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         y_vals_scaled3 = scaler_y3.fit_transform(y_vals3).flatten()
                         z_vals_scaled3 = scaler_z3.fit_transform(z_vals3).flatten()
 
-                        # p0 = [1, 0, 0]  # a, h, k
-                        
-                        p0 = [0, 1, 1, 1]  
+                        p0 = [1, 0, 0]
 
                         parametros1, _ = curve_fit(catenaria, y_vals_scaled1.flatten(), z_vals_scaled1)
                         parametros2, _ = curve_fit(catenaria, y_vals_scaled2.flatten(), z_vals_scaled2)
@@ -2260,40 +2247,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         y_pol1 = np.interp(x_pol1, scaler_y1.inverse_transform(y_vals_scaled1.reshape(-1, 1)).flatten(), fitted_z_vals1, period=len(fitted_z_vals3))
                         y_pol2 = np.interp(x_pol2, scaler_y2.inverse_transform(y_vals_scaled2.reshape(-1, 1)).flatten(), fitted_z_vals2, period=len(fitted_z_vals3))
                         y_pol3 = np.interp(x_pol3, scaler_y3.inverse_transform(y_vals_scaled3.reshape(-1, 1)).flatten(), fitted_z_vals3, period=len(fitted_z_vals3))
-                        
-                        ########################## TONI
-                        from scipy.stats import pearsonr, spearmanr
-                        
-                        RMSE1_z = np.sqrt(np.mean((fitted_z_vals_scaled1 - z_vals_scaled1)**2))
-                        max1_z = np.sqrt(np.max((fitted_z_vals_scaled1 - z_vals_scaled1)**2))
-                        pearson1_z, sig = pearsonr(fitted_z_vals_scaled1, z_vals_scaled1) 
-                        spearman1_z, p_value = spearmanr(fitted_z_vals_scaled1, z_vals_scaled1) 
-                        # RMSE1_y = np.sqrt(np.mean((fitted_y_scaled1 - y_vals_scaled1)**2))
-                        
-                        RMSE2_z = np.sqrt(np.mean((fitted_z_vals_scaled2 - z_vals_scaled2)**2))
-                        max2_z = np.sqrt(np.max((fitted_z_vals_scaled2 - z_vals_scaled2)**2))
-                        pearson2_z, sig = pearsonr(fitted_z_vals_scaled2, z_vals_scaled2) 
-                        spearman2_z, p_value = spearmanr(fitted_z_vals_scaled2, z_vals_scaled2) 
-                        # RMSE2_y = np.sqrt(np.mean((fitted_y_scaled2 - y_vals_scaled2)**2))
-                        
-                        RMSE3_z = np.sqrt(np.mean((fitted_z_vals_scaled3 - z_vals_scaled3)**2))
-                        max3_z = np.sqrt(np.max((fitted_z_vals_scaled3 - z_vals_scaled3)**2))
-                        pearson3_z, sig = pearsonr(fitted_z_vals_scaled3, z_vals_scaled3) 
-                        spearman3_z, p_value = spearmanr(fitted_z_vals_scaled3, z_vals_scaled3) 
-                        # RMSE3_y = np.sqrt(np.mean((fitted_y_scaled3 - y_vals_scaled3)**2))
-                        
-                        print(f"Fit error for z coordinate: {RMSE1_z}, {RMSE2_z}, {RMSE3_z}")
-                        print(f"Fit Pearson R for z coordinate: {pearson1_z}, {pearson2_z}, {pearson3_z}")
-                        print(f"Fit Spearman R for z coordinate: {spearman1_z}, {spearman2_z}, {spearman3_z}")
-                        # print(f"Fit error for y coordinate: {RMSE1_y}, {RMSE2_y}, {RMSE3_y}")
-                        
-                        rmses.append([RMSE1_z, RMSE2_z, RMSE3_z])
-                        maxes.append([max1_z,max2_z,max3_z])
-                        correlations.append([spearman1_z, spearman2_z, spearman3_z])
-                        
-                
-                        #########################
-                        
+
                         plt.figure(figsize=(10, 6))
                         # Pintamos los puntos de cada cable
                         plt.scatter(y1, z1, color='coral', s=30)
@@ -2308,7 +2262,11 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         plt.legend()
                         plt.title(idv)
                         plt.show()
-                
+                        # X_scaled=X_scaled[:,np.logical_or.reduce(filt[1:-1])]
+
+                        # print(len(x_pol1))
+                        # print(len(y_pol1))
+                        # print(x1)
                         x_fit1 = np.repeat(pd.Series(x1.flatten()).quantile(0.5),1000)
                         x_fit2 = np.repeat(pd.Series(x2.flatten()).quantile(0.5),1000)
                         x_fit3 = np.repeat(pd.Series(x3.flatten()).quantile(0.5),1000)
@@ -2318,7 +2276,13 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         fit1=np.vstack((x_fit1, x_pol1, y_pol1))
                         fit2=np.vstack((x_fit2, x_pol2, y_pol2))
                         fit3=np.vstack((x_fit3, x_pol3, y_pol3))
+
+                        # fit1=un_scale_conductor(fit1,scaler_x,scaler_y,scaler_z)
+                        # fit2=un_scale_conductor(fit2,scaler_x,scaler_y,scaler_z)
+                        # fit3=un_scale_conductor(fit3,scaler_x,scaler_y,scaler_z)
                         
+                        # mat_neg,cl_pta=un_rotate_points(cl_pta,mat)
+                        # mat_neg,cl_ptb=un_rotate_points(cl_ptb,mat)
                         mat_neg,fit1=un_rotate_points(fit1,mat)
                         mat_neg,fit2=un_rotate_points(fit2,mat)
                         mat_neg,fit3=un_rotate_points(fit3,mat)
@@ -2344,18 +2308,15 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         if all([md==3,var_z_x]):
                             dataf['flag'].append('bad_line_orientation')
                             if any([plot_filter=='all',plot_filter=='bad_line_orientation']):
-                                # plot_vano('{} Bad_Orientation{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                                pass
+                                plot_vano('{} Bad_Orientation{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
                         else:
                             dataf['flag'].append('bad_cluster')
                             if any([plot_filter=='bad_cluster',plot_filter=='all']):
-                                # plot_vano('{} Incomplete_cluster{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                                pass
+                                plot_vano('{} Incomplete_cluster{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
                     elif bad_fit==1:
                         dataf['flag'].append('bad_fit')
                         if any([plot_filter=='bad_fit',plot_filter=='all']):
-                            # plot_vano('{} Bad_fit{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                            pass
+                            plot_vano('{} Bad_fit{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
                     elif good==1:
                         dataf['flag'].append('good_fit')
                         if any([plot_filter=='good_fit',plot_filter=='all']):

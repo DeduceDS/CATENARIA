@@ -1,3 +1,4 @@
+
 import json
 import plotly.graph_objects as go
 from matplotlib.patches import Ellipse
@@ -29,8 +30,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn import metrics
 import open3d as o3d
 
-#### FUNCTIONS TO PROCESS JSON DATA ####
-
 from sklearn.decomposition import PCA
 import statsmodels.api as sm
 from sklearn.linear_model import LinearRegression
@@ -39,12 +38,6 @@ from puntuacion import *
 
 
 def print_element(element):
-    """
-    Print the contents of a nested dictionary in a formatted manner.
-
-    Parameters:
-    element (dict): The dictionary to be printed. It can contain nested dictionaries and lists.
-    """
 
     for key in element.keys():
 
@@ -71,16 +64,8 @@ def print_element(element):
         else:
             print(f"\n{key}: {element[key]}")
 
+
 def get_coord(points):
-    """
-    Extract and stack x, y, and z coordinates from a list of points.
-
-    Parameters:
-    points (list of tuples): A list where each tuple represents a point (x, y, z).
-
-    Returns:
-    tuple: Three numpy arrays containing the x, y, and z coordinates, respectively.
-    """
 
     x_vals = [punto[0] for punto in points]
     y_vals = [punto[1] for punto in points]
@@ -89,15 +74,6 @@ def get_coord(points):
     return np.stack(x_vals), np.stack(y_vals), np.stack(z_vals)
 
 def get_coord2(extremos_apoyos):
-    """
-    Extract and stack x, y, and z coordinates from a list of support points.
-
-    Parameters:
-    extremos_apoyos (list of dicts): A list where each dictionary contains the keys 
-                    "COORDENADAS_Z", "COORDENADA_X", and "COORDEANDA_Y".
-    Returns:
-    tuple: Three numpy arrays containing the x, y, and z coordinates, respectively.
-    """
 
     x_vals = []
     y_vals = []
@@ -114,17 +90,8 @@ def get_coord2(extremos_apoyos):
 
     return np.stack(x_vals), np.stack(y_vals), np.stack(z_vals)
 
+
 def extract_vano_values(data, vano):
-    """
-    Extract coordinate values for conductors, supports, and their endpoints from a data dictionary.
-
-    Parameters:
-    data (dict): The dictionary containing all the data.
-    vano (str): The key corresponding to the specific span of interest in the data dictionary.
-
-    Returns:
-    tuple: Four lists containing the x, y, and z coordinate arrays for conductors, supports, vertices, and support endpoints.
-    """
 
     puntos_conductores = data[vano]['LIDAR']['CONDUCTORES']
     puntos_apoyos = data[vano]['LIDAR']['APOYOS']
@@ -146,20 +113,7 @@ def extract_vano_values(data, vano):
 
     return cond_values, apoyo_values, vert_values, extremos_values
 
-#### FUNCTIONS TO PLOT DATA AND FITS ####
-
 def add_plot(fig, data, color, size, name, mode):
-    """
-    Add a 3D scatter plot to a given figure.
-
-    Parameters:
-    fig (plotly.graph_objs.Figure): The figure to add the plot to.
-    data (list of arrays): A list containing the x, y, and z coordinates.
-    color (str or array-like): The color of the markers.
-    size (int): The size of the markers.
-    name (str): The name of the trace.
-    mode (str): The mode of the scatter plot (e.g., 'markers', 'lines', 'lines+markers').
-    """
 
     fig.add_trace(go.Scatter3d(
         x=data[0],
@@ -174,18 +128,7 @@ def add_plot(fig, data, color, size, name, mode):
     ))
 
 def plot_fit(title,cond_values, apoyo_values, vert_values,fit,crossesa,crossesb):
-    """
-    Create and display a 3D scatter plot with conductors, supports, vertices, fit and endpoints.
 
-    Parameters:
-    title (str): The title of the plot.
-    cond_values (list of arrays): The x, y, and z coordinates for conductors.
-    apoyo_values (list of arrays): The x, y, and z coordinates for supports.
-    vert_values (list of lists of arrays): The x, y, and z coordinates for vertices.
-    fit (list of arrays): The x, y, and z coordinates for the selected fit.
-    crossesa (list of arrays): The x, y, and z coordinates for endpoints in apoyo 1.
-    crossesb (list of arrays): The x, y, and z coordinates for endpoints in apoyo 2.
-    """
     # Crea el gráfico para los conductores
     fig = go.Figure(data=[go.Scatter3d(
         x=fit[0],
@@ -226,16 +169,6 @@ def plot_fit(title,cond_values, apoyo_values, vert_values,fit,crossesa,crossesb)
     fig.show()
 
 def plot_fit_2(title,cond_values, apoyo_values, vert_values,fit):
-    """
-    Create and display a 3D scatter plot with conductors, supports, vertices, and fit.
-
-    Parameters:
-    title (str): The title of the plot.
-    cond_values (list of arrays): The x, y, and z coordinates for conductors.
-    apoyo_values (list of arrays): The x, y, and z coordinates for supports.
-    vert_values (list of lists of arrays): The x, y, and z coordinates for vertices.
-    fit (list of arrays): The x, y, and z coordinates for the selected fit.
-    """
 
     # Crea el gráfico para los conductores
     fig = go.Figure(data=[go.Scatter3d(
@@ -275,17 +208,7 @@ def plot_fit_2(title,cond_values, apoyo_values, vert_values,fit):
     fig.show()
 
 def plot_data(title,cond_values, apoyo_values, vert_values, extremos_values):
-    """
-    Create and display a 3D scatter plot with conductors, supports, vertices, and endpoints.
 
-    Parameters:
-    title (str): The title of the plot.
-    cond_values (list of arrays): The x, y, and z coordinates for conductors.
-    apoyo_values (list of arrays): The x, y, and z coordinates for supports.
-    vert_values (list of lists of arrays): The x, y, and z coordinates for vertices.
-    extremos_values (list of arrays): The x, y, and z coordinates for endpoints.
-    """
-    
     # Crea el gráfico para los conductores
     fig = go.Figure(data=[go.Scatter3d(
         x=cond_values[0],
@@ -305,6 +228,7 @@ def plot_data(title,cond_values, apoyo_values, vert_values, extremos_values):
     # Agrega el gráfico para los extremos
     add_plot(fig, extremos_values, "black", 5, "Extremos", "markers")
 
+
     for vert in vert_values:
 
         # Agrega el gráfico para los vertices
@@ -323,165 +247,9 @@ def plot_data(title,cond_values, apoyo_values, vert_values, extremos_values):
 
     # Muestra el gráfico
     fig.show()
-    
-def plot_vano(title,X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values):
-    """
-    This function generates scatter plots to visualize the clustering results on the x-y and y-z planes.
-    It also generates a 3D plot of the conductor values, support values, vertices, and endpoints.
 
-    Parameters:
-    title (str): The title of the plots.
-    X_scaled (numpy.ndarray): The scaled x, y, and z coordinates of the conductor points.
-    labels (numpy.ndarray): The cluster assignment for each point.
-    cond_values (list of arrays): The original x, y, and z coordinates for conductors.
-    apoyo_values (list of arrays): The original x, y, and z coordinates for supports.
-    vert_values (list of lists of arrays): The original x, y, and z coordinates for vertices.
-    extremos_values (list of arrays): The original x, y, and z coordinates for endpoints.
-    """
-    if len(labels)!=0:
-        plt.scatter(X_scaled.T[:, 0], X_scaled.T[:, 1], c=labels, cmap='viridis', label = labels)
-        plt.title('Clustering con kmeans')
-        plt.xlabel('X')
-        plt.ylabel('Y')
-
-        plt.tight_layout()
-        plt.title(title)
-        plt.show()
-
-        plt.scatter( X_scaled.T[:, 1], X_scaled.T[:, 2],c=labels, cmap='viridis', label = labels)
-        plt.title('Clustering con kmeans')
-        plt.xlabel('X')
-        plt.ylabel('Z')
-
-        plt.tight_layout()
-        plt.title(title)
-        plt.show()
-
-    plot_data(title,cond_values, apoyo_values, vert_values, extremos_values)
-    
-def plot_net(data,labels,k=10):
-    """
-    Plot the network of spans based on clustering labels.
-
-    This function extracts the middle points of the spans from the provided data, and then generates 
-    a scatter plot of these points colored by their cluster labels. The plot includes labels and a legend 
-    to indicate the different clusters.
-
-    Parameters:
-    data (list of dicts): The data containing information about different spans.
-    labels (numpy.ndarray): The cluster labels assigned to each span.
-    k (int): An optional parameter for any future enhancements or clustering requirements (default is 10).
-    """
-    ids_single_backing,X=data_middlepoints(data)
-    plt.figure(figsize=(8, 6))
-
-    # Plot the points and connect them with a line
-    scatter =plt.scatter(X['x'], X['y'], marker='o', c=labels, cmap='viridis', label = labels)
-
-    # for i, label in enumerate(labels):
-    #     plt.annotate(i, (X.iloc[i,0], y.iloc[i,1]), textcoords="offset points", xytext=(0,10), ha='center')
-
-    # Add labels and title
-    plt.xlabel('X-axis')
-    plt.ylabel('Y-axis')
-    plt.title('Sequential Points Connected by a Line')
-    # Show the plot
-    handles, _ = scatter.legend_elements()
-
-    plt.legend(handles, np.unique(labels), title="Labels")
-    plt.grid(True)
-    plt.show()
-
-def plot_full_net(data,labels):
-    """
-    Plot the full network of spans based on clustering labels.
-
-    This function processes each cluster in the provided data, extracts relevant values for each span,
-    fits catenary parameters, and generates plots for each cluster. It also provides summary statistics
-    about the spans, including counts of spans with single supports, incomplete spans, and spans analyzed.
-    Finally, it plots the distribution of parameters for all lines in the network.
-
-    Parameters:
-    data (list of dicts): The data containing information about different spans.
-    labels (numpy.ndarray): The cluster labels assigned to each span.
-    """
-
-    ids_single_backing,X=data_middlepoints(data)
-
-    fulldata_plot=[]
-    for lbl in np.unique(labels):
-
-        idval_subg=X.loc[labels==lbl,'ids'].to_list()
-
-        parameters,incomplete_vanos=fit_vano_group(data,sublist=idval_subg)
-
-        dfd=pretreatment_linegroup(parameters)
-
-        print(f'\nVanos con un sólo apoyo: {len(ids_single_backing)}')
-        print(f'Vanos incompletos: {len(incomplete_vanos)}')
-        print(f'Incompletos con apoyos: {len([el for el in incomplete_vanos if el not in ids_single_backing])}')
-        print(f'Sin apoyos y completos: {len([el for el in ids_single_backing if el not in incomplete_vanos])}')
-        print(f'Vanos analizados:{dfd.shape[0]}')
-        print(f'Vanos perdidos:{len(parameters)-dfd.shape[0]}\n')
-
-        plot_linegroup_parameters(dfd,str(lbl))
-        total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
-        fulldata_plot.append(total)
-
-    mins=[]
-    maxs=[]
-    for ils,lbl in enumerate(np.unique(labels)):
-        plt.hist(fulldata_plot[ils],label=lbl,alpha=0.5,density=True)
-        mins.append(fulldata_plot[ils].min())
-        maxs.append(fulldata_plot[ils].max())
-
-    plt.xlim(min(mins)-0.2,max(maxs)+0.2)
-    plt.legend()
-    plt.title('All Lines Distribution')
-    plt.show()
-
-def plot_linegroup_parameters(dfd,lbl):
-    """
-    Plot the distribution of parameters for different line groups within a cluster.
-
-    This function takes a DataFrame containing the parameters for different line groups (A1, B1, C1)
-    within a specific cluster, and generates histograms to visualize their distributions. It also plots
-    the overall distribution of all parameters combined. Mean values are highlighted with a red dashed line.
-
-    Parameters:
-    dfd (pd.DataFrame): A DataFrame containing the parameters for different line groups.
-    lbl (str): The label of the cluster being plotted.
-    """
-    total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
-
-    for ai in  ['A1','B1','C1']:
-        mn=dfd[ai].mean()
-        plt.hist(dfd[ai],label=ai,alpha=0.5,density=True)
-        plt.axvline(mn, color='red', linestyle='--', linewidth=1)
-    plt.xlim(total.min(),total.max())
-    plt.legend()
-    plt.title(f'3 Lines Distribution, cluster {lbl}')
-    plt.show()
-
-    mn=total.mean()
-    plt.hist(total)
-    plt.xlim(total.min(),total.max())
-    plt.axvline(mn, color='red', linestyle='--', linewidth=1)
-    plt.title(f'All lines, cluster {lbl}')
-    plt.show()
-
-#### FUNCTIONS TO COMPUTE DISTANCES ####
 
 def get_distances(extremos_values):
-    """
-    Calculate various distances between the endpoints.
-
-    Parameters:
-    extremos_values (list of arrays): The x, y, and z coordinates for endpoints.
-
-    Returns:
-    tuple: Distances between endpoints in the x, y, xz, xy, yz planes and the 3D distance.
-    """
 
     x_apoyos_distance = abs(extremos_values[0][0] - extremos_values[0][2])
     y_apoyos_distance = abs(extremos_values[1][0] - extremos_values[1][2])
@@ -493,40 +261,7 @@ def get_distances(extremos_values):
 
     return x_apoyos_distance, y_apoyos_distance, xz_distance, xy_distance, yz_distance, D3_apoyos_distance
 
-def distance(pt1, pt2):
-    """
-    Calculate the Euclidean distance between two 3D points.
-
-    Parameters:
-    pt1 (tuple): The (x, y, z) coordinates of the first point.
-    pt2 (tuple): The (x, y, z) coordinates of the second point.
-
-    Returns:
-    float: The Euclidean distance between the two points.
-    """
-    
-    x1, y1, z1 = pt1
-    x2, y2, z2 = pt2
-
-    distancia = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
-
-    return distancia
-
-#### FUNCTIONS TO TRANSFORM/PREPROCESS 3D POINTS ####
-
-#### ROTATION FUNCTIONS ####
-
 def rotate_points(points, extremos_values):
-    """
-    Rotate a set of points to align the diagonal between two endpoints with the y-axis.
-
-    Parameters:
-    points (list of arrays): The x, y, and z coordinates of the points to be rotated.
-    extremos_values (list of arrays): The x, y, and z coordinates for endpoints.
-
-    Returns:
-    tuple: The rotation matrix and the rotated points.
-    """
 
     points = np.array(points).T
 
@@ -556,16 +291,6 @@ def rotate_points(points, extremos_values):
     return matriz_rotacion, np.array(rotated_points)
 
 def un_rotate_points(points, matriz_rotacion):
-    """
-    Unrotate a set of points to dis-align with the diagonal between two endpoints with the y-axis.
-
-    Parameters:
-    points (list of arrays): The x, y, and z coordinates of the points to be rotated.
-    matriz_rotacion (list of arrays): 3D inverted rotation matrix.
-
-    Returns:
-    tuple: The rotation matrix and the rotated points.
-    """
 
     points = np.array(points).T
     # Crear la matriz de rotación para alinear la diagonal con el eje Y
@@ -577,19 +302,7 @@ def un_rotate_points(points, matriz_rotacion):
     return matriz_rotacion, np.array(rotated_points)
 
 def rotate_vano(cond_values, extremos_values, apoyo_values, vert_values):
-    """
-    Rotate conductors, supports, vertices, and endpoints to align with the y-axis.
 
-    Parameters:
-    cond_values (list of arrays): The x, y, and z coordinates for conductors.
-    extremos_values (list of arrays): The x, y, and z coordinates for endpoints.
-    apoyo_values (list of arrays): The x, y, and z coordinates for supports.
-    vert_values (list of lists of arrays): The x, y, and z coordinates for vertices.
-
-    Returns:
-    tuple: Rotated coordinates for conductors, supports, vertices, and endpoints.
-    """
-    
     # Rotate and compare
     mat, rotated_conds = rotate_points(cond_values, extremos_values)
 
@@ -599,37 +312,20 @@ def rotate_vano(cond_values, extremos_values, apoyo_values, vert_values):
 
     return mat,rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos
 
-#### OUTLIER FUNCTIONS ####
 
 def clean_outliers(rotated_conds, rotated_extremos):
-    """
-    Cleans outliers from the rotated conductor points based on endpoint boundaries and histogram analysis.
 
-    Parameters:
-    rotated_conds (numpy.ndarray): The rotated x, y, and z coordinates for conductors.
-    rotated_extremos (numpy.ndarray): The rotated x, y, and z coordinates for endpoints.
+    # Get top and bottom extreme values
+    # top = np.max([rotated_extremos.T[1][2],rotated_extremos.T[3][2]])
+    # bottom = np.max([rotated_extremos.T[0][2],rotated_extremos.T[2][2]])
 
-    Returns:
-    numpy.ndarray: The cleaned conductor points with outliers removed.
-
-    The function performs the following steps:
-    1. Defines the left and right boundaries based on the rotated endpoints.
-    2. Filters the conductor points within the specified y-coordinate boundaries.
-    3. Computes a histogram of the y-coordinates of the cropped conductor points.
-    4. Identifies significant peaks in the histogram to determine upper and lower thresholds for the y-coordinates.
-    5. Filters the conductor points using the detected y-coordinate thresholds.
-    6. Further refines the conductor points by removing the extreme 2% outliers in both y and x coordinates.
-
-    Note:
-    - The function assumes that the input arrays are properly rotated and aligned.
-    """
-    
     #Get left and right extreme values
     left = np.max([rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
     right = np.min([rotated_extremos.T[0][1],rotated_extremos.T[1][1]])
 
     # Filter points within the specified boundaries
     cropped_conds = rotated_conds[:, (right > rotated_conds[1,:]) & (rotated_conds[1,:] > left)]
+    # cropped_conds = cropped_conds[:, (top > cropped_conds[2,:]) & (cropped_conds[2,:] > bottom)]
 
     # Paso 1: Calcular el histograma de las coordenadas Y
     hist, bin_edges = np.histogram(cropped_conds[1, :], bins=200)
@@ -646,7 +342,10 @@ def clean_outliers(rotated_conds, rotated_extremos):
     # Inicializar los umbrales
     threshold_y_upper = None
     threshold_y_lower = None
-    
+
+    # print(hist[peak_bin_upper], hist[peak_bin_lower])
+    # plt.hist(cropped_conds[1, :])
+
     # Verificar si hay una línea horizontal significativa en la parte superior
     if hist[peak_bin_upper] > threshold_density:
         threshold_y_upper = bin_edges[peak_bin_upper + 1]  # El +1 es para obtener el borde superior del bin
@@ -679,16 +378,8 @@ def clean_outliers(rotated_conds, rotated_extremos):
 
     return cropped_conds
 
+
 def clean_outliers_2(rotated_conds):
-    """
-    Cleans outliers from the rotated conductor points based on interquartile range (IQR).
-
-    Parameters:
-    rotated_conds (numpy.ndarray): The rotated x, y, and z coordinates for conductors.
-
-    Returns:
-    numpy.ndarray: The cleaned conductor points with outliers removed based on IQR.
-    """
 
     lx=pd.Series(rotated_conds[0,:]).quantile(0.25)
     ux=pd.Series(rotated_conds[0,:]).quantile(0.75)
@@ -702,22 +393,8 @@ def clean_outliers_2(rotated_conds):
 
     return rotated_conds
 
+
 def clean_outliers_3(cropped_conds):
-    """
-    Cleans outliers from the cropped conductor points using statistical outlier removal.
-
-    Parameters:
-    cropped_conds (numpy.ndarray): The cropped x, y, and z coordinates for conductors.
-
-    Returns:
-    numpy.ndarray: The cleaned conductor points with outliers removed based on statistical outlier removal.
-
-    The function performs the following steps:
-    1. Converts the cropped conductor points into an Open3D PointCloud object.
-    2. Applies statistical outlier removal with a specified number of neighbors and standard deviation multiplier.
-    3. Selects the inlier points and returns them.
-    """
-    
     nn = 10 # Local search
     std_multip = 1 # Not very sensitive
 
@@ -729,17 +406,8 @@ def clean_outliers_3(cropped_conds):
     cropped_conds = np.asarray(inlier_cloud.points).T
     return cropped_conds
 
+
 def clean_outliers_4(cropped_conds):
-    """
-    Cleans outliers from the cropped conductor points using radius outlier removal.
-
-    Parameters:
-    cropped_conds (numpy.ndarray): The cropped x, y, and z coordinates for conductors.
-
-    Returns:
-    numpy.ndarray: The cleaned conductor points with outliers removed based on radius outlier removal.
-    """
-    
     nn = 10 # Local search
     radius = 1 # Not very sensitive
 
@@ -751,18 +419,8 @@ def clean_outliers_4(cropped_conds):
     cropped_conds = np.asarray(inlier_cloud.points).T
     return cropped_conds
 
-#### SCALE FUNCTIONS ####
 
 def scale_conductor(X):
-    """
-    Scale the x, y, and z coordinates of the conductor points using standard scaling.
-
-    Parameters:
-    X (numpy.ndarray): The x, y, and z coordinates of the conductor points.
-
-    Returns:
-    numpy.ndarray: The scaled x, y, and z coordinates.
-    """
 
     # Normalizzazione dei valori di x e y
     scaler_y = StandardScaler()
@@ -778,17 +436,9 @@ def scale_conductor(X):
     return X_scaled,scaler_x,scaler_y,scaler_z
 
 
+
 def un_scale_conductor(X,scaler_x,scaler_y,scaler_z):
-    """
-    Unscale the x, y, and z scaked coordinates of the conductor points using standard scaling.
 
-    Parameters:
-    X (numpy.ndarray): The x, y, and z coordinates of the conductor points.
-    scaler_x/y/z (Scaler Objects): The scaler used to scale each coordinate.
-
-    Returns:
-    numpy.ndarray: The unscaled x, y, and z coordinates.
-    """
     y_vals_unscaled = scaler_y.inverse_transform(X[1,:].reshape(-1, 1)).flatten()
     x_vals_unscaled = scaler_x.inverse_transform(X[0,:].reshape(-1, 1)).flatten()  # Flatten per curve_fit
     z_vals_unscaled = scaler_z.inverse_transform(X[2,:].reshape(-1, 1)).flatten()
@@ -797,117 +447,19 @@ def un_scale_conductor(X,scaler_x,scaler_y,scaler_z):
 
     return X_unscaled
 
-#### FUNCTIONS TO MODIFY/CORRECT ORIGINAL DATA####
 
-def data_middlepoints(data):
-    """
-    Calculate and scale the middle points of supports for each span in the provided data.
+def distance(pt1, pt2):
 
-    This function processes the data to extract the middle points of the supports (apoyos) for each span (vano).
-    If a span has two supports, the middle point is calculated as the average of the coordinates of the two supports.
-    If a span has only one support, its coordinates are used directly. Spans with no valid supports are reported as errors.
-    The coordinates are then scaled using standard scaling.
+    x1, y1, z1 = pt1
+    x2, y2, z2 = pt2
 
-    Parameters:
-    data (list of dicts): The data containing information about different spans.
+    distancia = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
 
-    Returns:
-    tuple:
-        - ids_bad_backing (list): A list of span IDs with no valid supports.
-        - X (pd.DataFrame): A DataFrame containing the span IDs and the scaled x and y coordinates of the middle points.
-    """
-    x=[]
-    y=[]
-    ids_bad_backing = []
-    ids = []
-    for iel, el in enumerate(data):
-        if len(data[iel]['APOYOS']) >= 2:
-            ids.append(data[iel]['ID_VANO'])
-            y.append((data[iel]['APOYOS'][0]['COORDEANDA_Y'] + data[iel]['APOYOS'][1]['COORDEANDA_Y']) / 2)
-            x.append((data[iel]['APOYOS'][0]['COORDENADA_X'] + data[iel]['APOYOS'][1]['COORDENADA_X']) / 2)
-        elif len(data[iel]['APOYOS']) == 1:
-            ids.append(data[iel]['ID_VANO'])
-            y.append(data[iel]['APOYOS'][0]['COORDEANDA_Y'] )
-            x.append(data[iel]['APOYOS'][0]['COORDENADA_X'] )
-        else:
-            ids_bad_backing.append(data[iel]['ID_VANO'])
-            print(f"Error: No se encontraron apoyos válidos para el elemento {iel}.")
-    scaler_x=StandardScaler()
-    scaler_y=StandardScaler()
-    x=scaler_x.fit_transform(np.array(x).reshape(-1,1))
-    y=scaler_y.fit_transform(np.array(y).reshape(-1,1))
-    X=pd.DataFrame({'ids':ids,'x':x.flatten(),'y':y.flatten()})
+    return distancia
 
-    return ids_bad_backing,X
 
-def define_backings(vano_length,apoyo_values):
-    """
-    Define the backings (extremos) based on the length of the span and the coordinates of the supports.
-
-    This function clusters the support coordinates into two groups using k-means clustering, calculates
-    the center of mass for each group, and determines the coordinates of the backings. If the distance
-    between the centroids of the clusters significantly deviates from the provided span length, the
-    function returns -1 indicating an error.
-
-    Parameters:
-    vano_length (float): The length of the span (vano).
-    apoyo_values (list of lists or numpy.ndarray): The x, y, and z coordinates of the supports.
-
-    Returns:
-    list: A list containing three numpy arrays representing the x, y, and z coordinates of the backings
-        for each support. If the distance between centroids deviates significantly from the span length,
-        returns -1.
-    """
-    #args: vano_length, and apoyo_values
-    #returns: a coordinate list like [array([119842.5432, 119842.5432, 119934.9426, 119934.9426]), array([4695380.2077, 4695380.2077, 4695375.6154, 4695375.6154]), array([949.0614, 958.8735, 987.3561, 997.7533])]
-    points = np.array(apoyo_values)
-    print(points.shape)
-
-    kmeans = KMeans(n_clusters=2, max_iter=500, n_init="auto").fit(points.T)
-    labels=kmeans.labels_
-    extremos = []
-    # print(f"Distance between centroids: {abs(centroids[0] - centroids[1])}")
-
-    for lab in np.unique(labels):
-
-        apoyo = points[:, labels == lab]
-
-        mean_x = np.mean(apoyo[0,:])
-        mean_y = np.mean(apoyo[1,:])
-        mean_z = np.mean(apoyo[2,:])
-
-        c_mass = np.array([mean_x, mean_y, mean_z])
-        extremos.append(c_mass)
-
-    dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
-    extremos = np.array(extremos).T
-
-    extremos_values=[]
-    for ael in extremos:
-        l=[]
-        for bel in ael:
-            l=l+[bel,bel]
-        res=np.array(l)
-        extremos_values.append(res)
-
-    if 100*abs(dist - vano_length)/vano_length > 10.0:
-        extremos_values=-1
-
-    return extremos_values
-
-#### FUNCTIONS FOR CLUSTERING ####
 
 def initialize_centroids(points, n_clusters):
-    """
-    Initialize centroids for clustering based on the minimum, maximum, and optionally mean of the x-coordinates.
-
-    Parameters:
-    points (numpy.ndarray): The x, y, and z coordinates of the points.
-    n_clusters (int): The number of clusters.
-
-    Returns:
-    numpy.ndarray: The initialized centroids.
-    """
 
     centroids = np.zeros((n_clusters))
 
@@ -918,33 +470,10 @@ def initialize_centroids(points, n_clusters):
     return centroids
 
 def assign_clusters(points, centroids):
-    """
-    Assign points to the nearest centroid based on x-coordinate distance.
-
-    Parameters:
-    points (numpy.ndarray): The x, y, and z coordinates of the points.
-    centroids (numpy.ndarray): The coordinates of the centroids.
-
-    Returns:
-    numpy.ndarray: The index of the nearest centroid for each point.
-    """
-    
     distances = np.abs(points[0][:, None] - centroids)
     return np.argmin(distances, axis=1)
 
 def update_centroids(points, labels, n_clusters):
-    """
-    Update the centroids based on the mean of the points assigned to each cluster.
-
-    Parameters:
-    points (numpy.ndarray): The x, y, and z coordinates of the points.
-    labels (numpy.ndarray): The cluster assignment for each point.
-    n_clusters (int): The number of clusters.
-
-    Returns:
-    numpy.ndarray: The updated centroids.
-    """
-    
     new_centroids = np.zeros(n_clusters)
     for i in range(n_clusters):
         cluster_points = points[0, labels == i]
@@ -953,19 +482,6 @@ def update_centroids(points, labels, n_clusters):
     return new_centroids
 
 def kmeans_clustering(points, n_clusters, max_iterations):
-    
-    """
-    Perform k-means clustering on a set of points.
-
-    Parameters:
-    points (numpy.ndarray): The x, y, and z coordinates of the points.
-    n_clusters (int): The number of clusters.
-    max_iterations (int): The maximum number of iterations.
-
-    Returns:
-    tuple: A tuple containing the labels for each point and the final centroids.
-    """
-    
     centroids = initialize_centroids(points, n_clusters)
     for iteration in range(max_iterations):
         labels = assign_clusters(points, centroids)
@@ -982,27 +498,6 @@ def kmeans_clustering(points, n_clusters, max_iterations):
 
 
 def spectral_clustering(points, n_clusters, n_init):
-    """
-    Performs spectral clustering on the given data points with scikit-learn. 
-    The affinity matrix is constructed using the k-nearest neighbors graph.
-
-    Parameters:
-    points (numpy.ndarray): A 2D array where each column represents a data point.
-    n_clusters (int): The number of clusters to form.
-    n_init (int): The number of times the algorithm will run with different initializations.
-
-    Returns:
-    tuple: A tuple containing:
-        - labels (numpy.ndarray): An array of cluster labels assigned to each data point.
-        - centroids (list): A list of centroids for each cluster, where each centroid is a list of coordinates.
-
-    The function performs the following steps:
-    1. Determines the number of neighbors for the k-nearest neighbors graph.
-    2. Constructs the affinity matrix using the k-nearest neighbors graph.
-    3. Applies the Spectral Clustering algorithm with the specified number of clusters and initializations.
-    4. Computes the centroids for each cluster by averaging the coordinates of points within the cluster.
-    5. Returns the cluster labels and centroids.
-    """
 
     n_samples = points.shape[1]
     n_neighbors = max(2, n_samples // 2)
@@ -1028,29 +523,9 @@ def catenaria(x, a, h, k):
     return r
 
 def invert_linear_model(y_val, slope, intercept):
-    """
-    Inverts a linear model to compute the x-values from given y-values.
-
-    Parameters:
-    y_val (float or numpy.ndarray), slope (float), intercept (float)
-    
-    Returns:
-    float or numpy.ndarray: The computed x-values corresponding to the given y-values.
-    """
-    
     return (y_val - intercept) / slope
 
 def flatten_sublist(sublist):
-    """
-    Flatten a list of arrays into a single list.
-
-    Parameters:
-    sublist (list of arrays): The list of arrays to be flattened.
-
-    Returns:
-    list: A single list containing all the elements of the input arrays.
-    """
-    
     flat_list = [sublist[0]]
     for array in sublist[1:]:
         print(array)
@@ -1058,16 +533,6 @@ def flatten_sublist(sublist):
     return flat_list
 
 def flatten_sublist_2(sublist):
-    """
-    Flatten a list of arrays into a single list, ensuring the last two elements are individually added at the end.
-
-    Parameters:
-    sublist (list of arrays): The list of arrays to be flattened.
-
-    Returns:
-    list: A single list containing all the elements of the input arrays, with the last two arrays added individually.
-    """
-    
     flat_list = [sublist[0]]
     for array in sublist[1:-2]:
         flat_list.extend(array.tolist())
@@ -1075,60 +540,7 @@ def flatten_sublist_2(sublist):
     flat_list.extend([sublist[-1]])
     return flat_list
 
-def clpt_to_array(cl_pt):
-    """
-    This function processes a list of coordinate points, extracts the x, y, and z coordinates,
-    and returns them as separate numpy arrays.
-
-    Parameters:
-    cl_pt (list of lists or tuples): A list where each element is a list or tuple containing
-                                    the x, y, and z coordinates of a point.
-    Returns:
-    numpy.ndarray: A 2D numpy array where the first row contains the x coordinates, the second row
-                contains the y coordinates, and the third row contains the z coordinates.
-    """
-    rfx=[]
-    rfy=[]
-    rfz=[]
-    print(cl_pt)
-    for el in cl_pt:
-        rfx.append(el[0])
-        rfy.append(el[1])
-        rfz.append(el[2])
-    return np.array([rfx,rfy,rfz])
-
-#### FUNCTIONS FOR DATA FITS ####
-
-def catenaria(x, a, h, k):
-    x = np.asarray(x).flatten()
-    r=a * np.cosh((x - h) / a) + k
-    return r
-
 def fit_data_parameters(data,sublist=[]):
-    """
-    Fits curves to the vano data entries, calculates parameters for the fitted curves, and identifies non-fitting vanos and lines.
-
-    Parameters:
-    data (list): List of dictionaries containing vano data. Each dictionary should have keys like 'ID_VANO', 'APOYOS', and 'LONGITUD_2D'.
-    sublist (list, optional): Sublist of 'ID_VANO' to process. If empty, all vanos in data are processed. Defaults to an empty list.
-
-    Returns:
-    tuple: A tuple containing:
-        - parameters (pandas.DataFrame): A DataFrame with the fitted parameters for each vano, including columns 'ID', 'a', 'h', and 'k'.
-        - non_fitting (list): A list of IDs of vanos or individual lines within vanos that could not be fully processed.
-
-    The function performs the following steps:
-    1. Iterates over the data and processes each vano entry.
-    2. Extracts coordinate values for the conductors, supports, vertices, and extremos.
-    3. Rotates the vano data points and removes outliers.
-    4. Scales the data points and applies k-means clustering to identify clusters.
-    5. Fits a catenary curve to each cluster and calculates the parameters.
-    6. Identifies non-fitting vanos and lines based on the clustering results and curve fitting.
-    7. Returns the calculated parameters in a DataFrame, and a list of non-fitting vanos and lines.
-    
-    Note:
-        Functions called:  `extract_vano_values`, `rotate_vano`, `clean_outliers`, `scale_conductor`, `kmeans_clustering`, and `catenaria`.
-    """
 
     parameters=[]
     labelsw=[]
@@ -1188,8 +600,8 @@ def fit_data_parameters(data,sublist=[]):
                     non_fitting.append(idv+'_'+str(el))
 
             if idv not in non_fitting:
-                labelsw=labelsw+labelsc
-                parameters=parameters+parameters_vano
+                 labelsw=labelsw+labelsc
+                 parameters=parameters+parameters_vano
 
     columns = ['ID','a', 'h', 'k']
     parameters = pd.DataFrame(parameters, columns=columns)
@@ -1198,31 +610,6 @@ def fit_data_parameters(data,sublist=[]):
 
 
 def fit_vano_group(data,sublist=[]):
-    """
-    Fits curves to the vano data entries, calculates parameters for the fitted curves, and identifies incomplete vanos and lines.
-
-    Parameters:
-    data (list): List of dictionaries containing vano data. Each dictionary should have keys like 'ID_VANO', 'APOYOS', and 'LONGITUD_2D'.
-    sublist (list, optional): Sublist of 'ID_VANO' to process. If empty, all vanos in data are processed. Defaults to an empty list.
-
-    Returns:
-    tuple: A tuple containing:
-        - parameters (list): A list of parameters for each fitted vano, including the vano ID and the optimized parameters for the curve.
-        - incomplete_vanos (list): A list of IDs of vanos that could not be fully processed.
-        - incomplete_lines (list): A list of IDs of individual lines within vanos that could not be fully processed.
-
-    The function performs the following steps:
-    1. Iterates over the data and processes each vano entry.
-    2. Extracts coordinate values for the conductors, supports, vertices, and extremos.
-    3. Rotates the vano data points and removes outliers.
-    4. Scales the data points and applies k-means clustering to identify clusters.
-    5. Fits a catenary curve to each cluster and calculates the parameters.
-    6. Identifies incomplete vanos and lines based on the clustering results and curve fitting.
-    7. Returns the calculated parameters, and lists of incomplete vanos and lines.
-
-    Note:
-    - Functions called: `extract_vano_values`, `rotate_vano`, `clean_outliers`, `scale_conductor`, `kmeans_clustering`, and `catenaria`.
-    """
 
     parameters=[]
     incomplete_vanos = []
@@ -1291,29 +678,6 @@ def fit_vano_group(data,sublist=[]):
 
 
 def group_dbscan_4(k,X_scaled):
-    """
-    Groups data points into clusters using the DBSCAN algorithm, with the optimal epsilon value determined from k-nearest neighbors distances.
-
-    Parameters:
-    k (int): The number of nearest neighbors to consider for determining the epsilon value.
-    X_scaled (numpy.ndarray): A 2D array of scaled data points to be clustered.
-
-    Returns:
-    tuple: A tuple containing:
-        - centroids (list): A list of centroids for each cluster, where each centroid is a list of coordinates.
-        - labels (numpy.ndarray): An array of labels assigned to each data point, indicating the cluster it belongs to. 
-        Noise points are labeled as -1.
-
-    The function performs the following steps:
-    1. Fits a k-nearest neighbors model to the data to determine distances to the k-th nearest neighbors.
-    2. Sorts these distances and computes the second derivative to find the inflection point, which indicates the optimal epsilon value.
-    3. Applies the DBSCAN algorithm with the determined epsilon value and the specified min_samples.
-    4. Computes the centroids for each cluster by averaging the coordinates of points within the cluster.
-
-    Note:
-    - The function determines the optimal epsilon value dynamically based on the distances to the k-th nearest neighbors.
-    - The DBSCAN algorithm groups data points into clusters based on density, identifying regions of high density and labeling points in low-density regions as noise.
-    """
 
     neighbors = NearestNeighbors(n_neighbors=int(k))
     neighbors_fit = neighbors.fit(X_scaled)
@@ -1337,27 +701,6 @@ def group_dbscan_4(k,X_scaled):
     return centroids, labels
 
 def dbscan_find_clusters_4(X_scaled):
-    """
-    Finds clusters in the scaled data using the DBSCAN algorithm with different epsilon values,
-    and selects the best clustering based on the silhouette score.
-
-    Parameters:
-    X_scaled (numpy.ndarray): A 2D array of scaled data points to be clustered.
-
-    Returns:
-    tuple: A tuple containing:
-        - centroids (numpy.ndarray): The centroids of the clusters found by DBSCAN.
-        - labels (numpy.ndarray): The labels assigned to each data point indicating the cluster it belongs to.
-
-    The function performs the following steps:
-    1. Iterates over a predefined list of epsilon values.
-    2. Applies the `group_dbscan_3` function to cluster the data with each epsilon value.
-    3. Computes the silhouette score for each clustering result.
-    4. Selects the clustering result with the highest silhouette score.
-    5. Returns the centroids and labels of the best clustering result.
-
-    The silhouette score measures how similar an object is to its own cluster compared to other clusters, providing an indication of the quality of the clustering.
-    """
 
     ar=[3,5,7,10,15,20,35,50]
     matching_clust=[]
@@ -1383,29 +726,6 @@ def dbscan_find_clusters_4(X_scaled):
     return centroids,labels
 
 def group_dbscan_3(k,X_scaled):
-    """
-    Groups data points into clusters using the DBSCAN algorithm, with the optimal epsilon value determined from k-nearest neighbors distances.
-
-    Parameters:
-    k (int): The number of nearest neighbors to consider for determining the epsilon value.
-    X_scaled (numpy.ndarray): A 2D array of scaled data points to be clustered.
-
-    Returns:
-    tuple: A tuple containing:
-        - centroids (list): A list of centroids for each cluster, where each centroid is a list of coordinates.
-        - labels (numpy.ndarray): An array of labels assigned to each data point, indicating the cluster it belongs to. 
-        Noise points are labeled as -1.
-
-    The function performs the following steps:
-    1. Fits a k-nearest neighbors model to the data to determine distances to the k-th nearest neighbors.
-    2. Sorts these distances and computes the second derivative to find the inflection point, which indicates the optimal epsilon value.
-    3. Applies the DBSCAN algorithm with the determined epsilon value and the specified min_samples.
-    4. Computes the centroids for each cluster by averaging the coordinates of points within the cluster.
-
-    Note:
-    - The function determines the optimal epsilon value dynamically based on the distances to the k-th nearest neighbors.
-    - The DBSCAN algorithm groups data points into clusters based on density, identifying regions of high density and labeling points in low-density regions as noise.
-    """
 
     neighbors = NearestNeighbors(n_neighbors=int(k))
     neighbors_fit = neighbors.fit(X_scaled)
@@ -1432,27 +752,6 @@ def group_dbscan_3(k,X_scaled):
 
 
 def dbscan_find_clusters_3(X_scaled):
-    """
-    Finds clusters in the scaled data using the DBSCAN algorithm with different epsilon values,
-    and selects the best clustering based on the silhouette score.
-
-    Parameters:
-    X_scaled (numpy.ndarray): A 2D array of scaled data points to be clustered.
-
-    Returns:
-    tuple: A tuple containing:
-        - centroids (numpy.ndarray): The centroids of the clusters found by DBSCAN.
-        - labels (numpy.ndarray): The labels assigned to each data point indicating the cluster it belongs to.
-
-    The function performs the following steps:
-    1. Iterates over a predefined list of epsilon values.
-    2. Applies the `group_dbscan_3` function to cluster the data with each epsilon value.
-    3. Computes the silhouette score for each clustering result.
-    4. Selects the clustering result with the highest silhouette score.
-    5. Returns the centroids and labels of the best clustering result.
-
-    The silhouette score measures how similar an object is to its own cluster compared to other clusters, providing an indication of the quality of the clustering.
-    """
 
     ar=[5,10,20]
     for k in ar:
@@ -1476,19 +775,7 @@ def dbscan_find_clusters_3(X_scaled):
 
 
 def plot_vano(title,X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values):
-    """
-    This function generates scatter plots to visualize the clustering results on the x-y and y-z planes.
-    It also generates a 3D plot of the conductor values, support values, vertices, and endpoints.
 
-    Parameters:
-    title (str): The title of the plots.
-    X_scaled (numpy.ndarray): The scaled x, y, and z coordinates of the conductor points.
-    labels (numpy.ndarray): The cluster assignment for each point.
-    cond_values (list of arrays): The original x, y, and z coordinates for conductors.
-    apoyo_values (list of arrays): The original x, y, and z coordinates for supports.
-    vert_values (list of lists of arrays): The original x, y, and z coordinates for vertices.
-    extremos_values (list of arrays): The original x, y, and z coordinates for endpoints.
-    """ 
     if len(labels)!=0:
         plt.scatter(X_scaled.T[:, 0], X_scaled.T[:, 1], c=labels, cmap='viridis', label = labels)
         plt.title('Clustering con kmeans')
@@ -1511,28 +798,6 @@ def plot_vano(title,X_scaled,labels,cond_values, apoyo_values, vert_values, extr
     plot_data(title,cond_values, apoyo_values, vert_values, extremos_values)
 
 def define_backings(vano_length,apoyo_values):
-    """
-    Defines the backing points for a vano based on its length and supporting points.
-
-    Parameters:
-    vano_length (float): The length of the vano.
-    apoyo_values (list or numpy.ndarray): A list or array of supporting points, where each point is represented by its (x, y, z) coordinates.
-
-    Returns:
-    list or int: A list of coordinate arrays representing the backing points, with the format:
-                [array([x1, x1, x2, x2]), array([y1, y1, y2, y2]), array([z1, z1, z2, z2])].
-                If the distance between the calculated centroids deviates by more than 10% from the vano length, returns -1.
-
-    The function performs the following steps:
-    1. Converts the supporting points into a NumPy array.
-    2. Uses KMeans clustering to classify the points into two clusters.
-    3. Calculates the centroid of each cluster.
-    4. Checks the distance between the two centroids.
-    5. If the distance is within 10% of the vano length, formats the centroid coordinates into the required structure and returns them.
-    Otherwise, returns -1.
-
-    The function ensures that the calculated backings closely match the expected vano length, enhancing the accuracy of the backing points used for further processing.
-    """
     #args: vano_length, and apoyo_values
     #returns: a coordinate list like [array([119842.5432, 119842.5432, 119934.9426, 119934.9426]), array([4695380.2077, 4695380.2077, 4695375.6154, 4695375.6154]), array([949.0614, 958.8735, 987.3561, 997.7533])]
     points = np.array(apoyo_values)
@@ -1572,19 +837,6 @@ def define_backings(vano_length,apoyo_values):
 
 
 def clpt_to_array(cl_pt):
-    """
-    Converts a list of 3D points (tuples or lists) into a NumPy array with separate arrays for each coordinate.
-
-    Parameters:
-    cl_pt (list): List of 3D points, where each point is a tuple or list of three coordinates (x, y, z).
-
-    Returns:
-    numpy.ndarray: A 2D NumPy array with shape (3, n) where n is the number of points. The first row contains the x-coordinates, 
-                the second row contains the y-coordinates, and the third row contains the z-coordinates.
-
-    This function processes a list of 3D points and separates their coordinates into individual arrays for x, y, and z. 
-    It then combines these arrays into a single NumPy array for easy manipulation and analysis.
-    """
     rfx=[]
     rfy=[]
     rfz=[]
@@ -1598,40 +850,11 @@ def clpt_to_array(cl_pt):
 
 
 def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=False,label=''):
-    """
-    Processes a group of "vano" data entries, fits curves, and plots results based on various conditions and filters.
-
-    Parameters:
-    data (list): List of dictionaries containing vano data. Each dictionary should have keys like 'ID_VANO', 'APOYOS', and 'LONGITUD_2D'.
-    sublist (list, optional): Sublist of 'ID_VANO' to process. If empty, all vanos in data are processed. Defaults to an empty list.
-    plot_filter (str, optional): Filter for plotting. Options are "bad_backing", "bad_cluster", "bad_line_number", "bad_line_orientation", "bad_fit", "good_fit", "empty", or "all". Defaults to None.
-    init (int, optional): Starting index for processing. Defaults to 0.
-    end (int, optional): Ending index for processing. If None, processes up to the length of the sublist. Defaults to None.
-    save (bool, optional): Flag to save the resulting data to a JSON file. Defaults to False.
-    label (str, optional): Label to add to the saved file name. Defaults to an empty string.
-
-    Returns:
-    pandas.DataFrame: DataFrame containing results with columns 'id', 'flag', and 'line_number'.
-
-    The function performs the following steps:
-    1. Initializes necessary variables and structures.
-    2. Iterates over the data, processing each vano entry.
-    3. Extracts and scales coordinate data.
-    4. Filters and clusters data points.
-    5. Fits a curve to the data points and evaluates the fit.
-    6. Plots the results based on the specified plot_filter.
-    7. Saves the results to a JSON file if save is True.
-    8. Returns a DataFrame with the processing results.
-
-    The function handles different conditions such as incomplete data, bad cluster formation, and bad fit, and tags each vano entry accordingly. It also rotates and scales the data points for fitting and plots the results based on the specified filters.
-    """
-    
-    #filter= "bad_backing", bad_cluster, bad_line_number, bad_line_orientation, bad_fit, good_fit, empty
+    #plot_filter= "bad_backing", bad_cluster, bad_line_number, bad_line_orientation, bad_fit, good_fit, empty
 
     if len(sublist)==0:
         sublist=[data[i]['ID_VANO'] for i in range(len(data))]
-    end=int(len(data)) if end==None else end
-    print(end)
+    end=len(sublist) if end!=None else end
     parameters=[]
     incomplete_vanos = []
     incomplete_lines=[]
@@ -1803,6 +1026,7 @@ def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=Fa
 
                                 z_fit = catenaria(y_fit, *optim_params)
 
+
                                 # coefficients = np.polyfit(x_vals.flatten(), y_vals.flatten(), 1)
                                 # linear_fit = np.poly1d(coefficients)
                                 # slope, intercept=coefficients
@@ -1815,8 +1039,6 @@ def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=Fa
 
                                 x_fit = np.repeat(pd.Series(clust[0,:]).quantile(0.5),1000)
                                 fit=np.vstack((x_fit, y_fit,z_fit))
-                                
-                                # rmse, corr = evaluate_fit(fit, X_scaled)
 
                                 fit=un_scale_conductor(fit,scaler_x,scaler_y,scaler_z)
                                 # optim_params, _ = curve_fit(catenaria, fit[1,:].flatten(), fit[2,:].flatten(), p0=initial_params, method = 'trf')
@@ -1925,53 +1147,15 @@ def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=Fa
 
 
 def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=False,label=''):
-    """
-    Processes a group of "vano" data entries, fits curves, and plots results based on various conditions and filters.
-
-    Parameters:
-    data (list): List of dictionaries containing vano data. Each dictionary should have keys like 'ID_VANO', 'APOYOS', and 'LONGITUD_2D'.
-    sublist (list, optional): Sublist of 'ID_VANO' to process. If empty, all vanos in data are processed. Defaults to an empty list.
-    plot_filter (str, optional): Filter for plotting. Options are "bad_backing", "bad_cluster", "bad_line_number", "bad_line_orientation", "bad_fit", "good_fit", "empty", or "all". Defaults to None.
-    init (int, optional): Starting index for processing. Defaults to 0.
-    end (int, optional): Ending index for processing. If None, processes up to the length of the sublist. Defaults to None.
-    save (bool, optional): Flag to save the resulting data to a JSON file. Defaults to False.
-    label (str, optional): Label to add to the saved file name. Defaults to an empty string.
-
-    Returns:
-    pandas.DataFrame: DataFrame containing results with columns 'id', 'flag', and 'line_number'.
-
-    The function performs the following steps:
-    1. Initializes necessary variables and structures.
-    2. Iterates over the data, processing each vano entry.
-    3. Extracts and scales coordinate data.
-    4. Filters and clusters data points.
-    5. Fits a curve to the data points and evaluates the fit.
-    6. Plots the results based on the specified plot_filter.
-    7. Saves the results to a JSON file if save is True.
-    8. Returns a DataFrame with the processing results.
-
-    The function handles different conditions such as incomplete data, bad cluster formation, and bad fit, and tags each vano entry accordingly. It also rotates and scales the data points for fitting and plots the results based on the specified filters.
-
-    Example Usage:
-    data = [...]  # List of dictionaries with vano data
-    df = fit_plot_vano_group_2(data, sublist=[1, 2, 3], plot_filter='good_fit', save=True, label='test')
-    """
     #filter= "bad_backing", bad_cluster, bad_line_number, bad_line_orientation, bad_fit, good_fit, empty
 
     if len(sublist)==0:
         sublist=[data[i]['ID_VANO'] for i in range(len(data))]
-        
-    end=int(len(data)) if end==None else end
-    
+    end=len(sublist) if end!=None else end
     parameters=[]
     incomplete_vanos = []
     incomplete_lines=[]
     dataf = {'id': [], 'flag': [],'line_number':[]}
-    
-    rmses = []
-    maxes = []
-    correlations = []
-    
     for i in range(len(data)):
 
         if all([i>=init,i<=end]):
@@ -2007,11 +1191,11 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                     dataf['flag'].append('bad_backing')
                     dataf['line_number'].append(0)
                     if any([plot_filter=='all',plot_filter=='bad_backing']):
-                        continue
-                        # plot_vano(f'{idv} Bad_Backing',X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
+                        plot_vano(f'{idv} Bad_Backing',X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
                     # print(i+1)
                     # print(len(dataf['flag']))
                     # print(dataf['flag'][-1])
+                    continue
 
                 # print('bad_backing2')
 
@@ -2091,14 +1275,12 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                 if finc[0]=='incomplete':
                     dataf['flag'].append('empty')
                     if any([plot_filter=='all',plot_filter=='empty']):
-                        # plot_vano('{} Empty{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                        pass
+                        plot_vano('{} Empty{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
 
                 elif md!=3:
                     dataf['flag'].append('bad_line_number')
                     if any([plot_filter=='all',plot_filter=='bad_line_number']):
-                        # plot_vano('{} Bad_Line_Number{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                        pass
+                        plot_vano('{} Bad_Line_Number{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
 
                 else:
 
@@ -2106,6 +1288,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         # Matriz de rotación
                         mat, rotated_conds = rotate_points(cond_values, extremos_values)
                         extremos_values = mat.dot(extremos_values)
+
 
                         X_extremos = extremos_values[0]
                         Y_extremos = extremos_values[1]
@@ -2134,6 +1317,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         [X, y] = [x_cond.reshape(-1, 1), y_cond.reshape(-1, 1)]
 
                         model = SpectralClustering(n_clusters=3, affinity='nearest_neighbors', random_state=0)
+
 
                         y_spectral = model.fit_predict(X)
 
@@ -2180,17 +1364,12 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         x_filt_cond1, y_filt_cond1, z_filt_cond1 = x1[f_ind1], y1[f_ind1], z1[f_ind1]
                         x_filt_cond2, y_filt_cond2, z_filt_cond2 = x2[f_ind2], y2[f_ind2], z2[f_ind2]
                         x_filt_cond3, y_filt_cond3, z_filt_cond3 = x3[f_ind3], y3[f_ind3], z3[f_ind3]
-                        
 
                         # Función de la catenaria
                         from sklearn.preprocessing import StandardScaler
                         from scipy.optimize import curve_fit
-                        
-                        # def catenaria(x, a, h, k):
-                        #     return a*np.cosh((x-h)/a)+k
-                        
-                        def catenaria(x, a, b, c, d):
-                            return a + b*x + c*x**2 + d*x**3
+                        def catenaria(x, a, h, k):
+                            return a*np.cosh((x-h)/a)+k
 
                         y_vals1 = y_filt_cond1.reshape(-1, 1)
                         z_vals1 = z_filt_cond1.reshape(-1, 1)
@@ -2213,9 +1392,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         y_vals_scaled3 = scaler_y3.fit_transform(y_vals3).flatten()
                         z_vals_scaled3 = scaler_z3.fit_transform(z_vals3).flatten()
 
-                        # p0 = [1, 0, 0]  # a, h, k
-                        
-                        p0 = [0, 1, 1, 1]  
+                        p0 = [1, 0, 0]
 
                         parametros1, _ = curve_fit(catenaria, y_vals_scaled1.flatten(), z_vals_scaled1)
                         parametros2, _ = curve_fit(catenaria, y_vals_scaled2.flatten(), z_vals_scaled2)
@@ -2260,40 +1437,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         y_pol1 = np.interp(x_pol1, scaler_y1.inverse_transform(y_vals_scaled1.reshape(-1, 1)).flatten(), fitted_z_vals1, period=len(fitted_z_vals3))
                         y_pol2 = np.interp(x_pol2, scaler_y2.inverse_transform(y_vals_scaled2.reshape(-1, 1)).flatten(), fitted_z_vals2, period=len(fitted_z_vals3))
                         y_pol3 = np.interp(x_pol3, scaler_y3.inverse_transform(y_vals_scaled3.reshape(-1, 1)).flatten(), fitted_z_vals3, period=len(fitted_z_vals3))
-                        
-                        ########################## TONI
-                        from scipy.stats import pearsonr, spearmanr
-                        
-                        RMSE1_z = np.sqrt(np.mean((fitted_z_vals_scaled1 - z_vals_scaled1)**2))
-                        max1_z = np.sqrt(np.max((fitted_z_vals_scaled1 - z_vals_scaled1)**2))
-                        pearson1_z, sig = pearsonr(fitted_z_vals_scaled1, z_vals_scaled1) 
-                        spearman1_z, p_value = spearmanr(fitted_z_vals_scaled1, z_vals_scaled1) 
-                        # RMSE1_y = np.sqrt(np.mean((fitted_y_scaled1 - y_vals_scaled1)**2))
-                        
-                        RMSE2_z = np.sqrt(np.mean((fitted_z_vals_scaled2 - z_vals_scaled2)**2))
-                        max2_z = np.sqrt(np.max((fitted_z_vals_scaled2 - z_vals_scaled2)**2))
-                        pearson2_z, sig = pearsonr(fitted_z_vals_scaled2, z_vals_scaled2) 
-                        spearman2_z, p_value = spearmanr(fitted_z_vals_scaled2, z_vals_scaled2) 
-                        # RMSE2_y = np.sqrt(np.mean((fitted_y_scaled2 - y_vals_scaled2)**2))
-                        
-                        RMSE3_z = np.sqrt(np.mean((fitted_z_vals_scaled3 - z_vals_scaled3)**2))
-                        max3_z = np.sqrt(np.max((fitted_z_vals_scaled3 - z_vals_scaled3)**2))
-                        pearson3_z, sig = pearsonr(fitted_z_vals_scaled3, z_vals_scaled3) 
-                        spearman3_z, p_value = spearmanr(fitted_z_vals_scaled3, z_vals_scaled3) 
-                        # RMSE3_y = np.sqrt(np.mean((fitted_y_scaled3 - y_vals_scaled3)**2))
-                        
-                        print(f"Fit error for z coordinate: {RMSE1_z}, {RMSE2_z}, {RMSE3_z}")
-                        print(f"Fit Pearson R for z coordinate: {pearson1_z}, {pearson2_z}, {pearson3_z}")
-                        print(f"Fit Spearman R for z coordinate: {spearman1_z}, {spearman2_z}, {spearman3_z}")
-                        # print(f"Fit error for y coordinate: {RMSE1_y}, {RMSE2_y}, {RMSE3_y}")
-                        
-                        rmses.append([RMSE1_z, RMSE2_z, RMSE3_z])
-                        maxes.append([max1_z,max2_z,max3_z])
-                        correlations.append([spearman1_z, spearman2_z, spearman3_z])
-                        
-                
-                        #########################
-                        
+
                         plt.figure(figsize=(10, 6))
                         # Pintamos los puntos de cada cable
                         plt.scatter(y1, z1, color='coral', s=30)
@@ -2308,7 +1452,11 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         plt.legend()
                         plt.title(idv)
                         plt.show()
-                
+                        # X_scaled=X_scaled[:,np.logical_or.reduce(filt[1:-1])]
+
+                        # print(len(x_pol1))
+                        # print(len(y_pol1))
+                        # print(x1)
                         x_fit1 = np.repeat(pd.Series(x1.flatten()).quantile(0.5),1000)
                         x_fit2 = np.repeat(pd.Series(x2.flatten()).quantile(0.5),1000)
                         x_fit3 = np.repeat(pd.Series(x3.flatten()).quantile(0.5),1000)
@@ -2318,7 +1466,13 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         fit1=np.vstack((x_fit1, x_pol1, y_pol1))
                         fit2=np.vstack((x_fit2, x_pol2, y_pol2))
                         fit3=np.vstack((x_fit3, x_pol3, y_pol3))
+
+                        # fit1=un_scale_conductor(fit1,scaler_x,scaler_y,scaler_z)
+                        # fit2=un_scale_conductor(fit2,scaler_x,scaler_y,scaler_z)
+                        # fit3=un_scale_conductor(fit3,scaler_x,scaler_y,scaler_z)
                         
+                        # mat_neg,cl_pta=un_rotate_points(cl_pta,mat)
+                        # mat_neg,cl_ptb=un_rotate_points(cl_ptb,mat)
                         mat_neg,fit1=un_rotate_points(fit1,mat)
                         mat_neg,fit2=un_rotate_points(fit2,mat)
                         mat_neg,fit3=un_rotate_points(fit3,mat)
@@ -2344,18 +1498,15 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         if all([md==3,var_z_x]):
                             dataf['flag'].append('bad_line_orientation')
                             if any([plot_filter=='all',plot_filter=='bad_line_orientation']):
-                                # plot_vano('{} Bad_Orientation{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                                pass
+                                plot_vano('{} Bad_Orientation{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
                         else:
                             dataf['flag'].append('bad_cluster')
                             if any([plot_filter=='bad_cluster',plot_filter=='all']):
-                                # plot_vano('{} Incomplete_cluster{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                                pass
+                                plot_vano('{} Incomplete_cluster{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
                     elif bad_fit==1:
                         dataf['flag'].append('bad_fit')
                         if any([plot_filter=='bad_fit',plot_filter=='all']):
-                            # plot_vano('{} Bad_fit{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                            pass
+                            plot_vano('{} Bad_fit{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
                     elif good==1:
                         dataf['flag'].append('good_fit')
                         if any([plot_filter=='good_fit',plot_filter=='all']):
@@ -2379,20 +1530,6 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                 
                 
 def group_dbscan(k,X_scaled):
-    """
-    Perform DBSCAN clustering on scaled data, determining the optimal epsilon using the k-nearest neighbors method.
-
-    This function uses the DBSCAN algorithm to cluster the given scaled data. It first fits the k-nearest neighbors 
-    to determine the distances and uses the second derivative of the sorted distances to find the inflection point, 
-    which is used as the epsilon value for DBSCAN. The function then performs DBSCAN clustering and returns the cluster labels.
-
-    Parameters:
-    k (int): The number of neighbors to use for determining the optimal epsilon.
-    X_scaled (numpy.ndarray): The scaled x, y, and z coordinates of the data points.
-
-    Returns:
-    numpy.ndarray: The cluster labels assigned to each data point.
-    """
 
     neighbors = NearestNeighbors(n_neighbors=k)
     neighbors_fit = neighbors.fit(X_scaled)
@@ -2408,22 +1545,6 @@ def group_dbscan(k,X_scaled):
     return labels
 
 def data_middlepoints(data):
-    """
-    Calculate and scale the middle points of supports for each span in the provided data.
-
-    This function processes the data to extract the middle points of the supports (apoyos) for each span (vano).
-    If a span has two supports, the middle point is calculated as the average of the coordinates of the two supports.
-    If a span has only one support, its coordinates are used directly. Spans with no valid supports are reported as errors.
-    The coordinates are then scaled using standard scaling.
-
-    Parameters:
-    data (list of dicts): The data containing information about different spans.
-
-    Returns:
-    tuple:
-        - ids_bad_backing (list): A list of span IDs with no valid supports.
-        - X (pd.DataFrame): A DataFrame containing the span IDs and the scaled x and y coordinates of the middle points.
-    """
     x=[]
     y=[]
     ids_bad_backing = []
@@ -2449,21 +1570,6 @@ def data_middlepoints(data):
     return ids_bad_backing,X
 
 def pretreatment_linegroup(parameters):
-    """
-    Preprocess and clean the parameters data for line groups.
-
-    This function flattens the list of parameters, converts it into a DataFrame, and performs
-    outlier removal using the interquartile range (IQR) method. The cleaned DataFrame is then
-    returned for further analysis.
-
-    Parameters:
-    parameters (list): A list of parameters for different line groups, where each sublist contains
-                    the parameters for a single line group.
-
-    Returns:
-    pd.DataFrame: A cleaned DataFrame containing the parameters for different line groups, with
-                outliers removed and indices reset.xº
-    """
     flattened_data = [flatten_sublist(sublist) for sublist in parameters]
     columns = ['ID', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']
     df = pd.DataFrame(flattened_data, columns=columns)
@@ -2475,22 +1581,9 @@ def pretreatment_linegroup(parameters):
     dfd=dfd.reset_index()
     return dfd
 
+
 def pretreatment_linegroup_from_json(df):
-    """
-    Preprocess and clean the parameters data for line groups from a DataFrame.
 
-    This function performs outlier removal on the DataFrame using the interquartile range (IQR) method.
-    It processes the columns 'a0', 'a1', and 'a2', and removes rows where the values fall outside of
-    1.5 times the IQR from the first and third quartiles. The cleaned DataFrame is then returned for
-    further analysis.
-
-    Parameters:
-    df (pd.DataFrame): A DataFrame containing the parameters for different line groups, including columns
-                    such as 'a0', 'a1', and 'a2'.
-    Returns:
-    pd.DataFrame: A cleaned DataFrame containing the parameters for different line groups, with
-                outliers removed and indices reset.
-    """
     dfd=df.dropna().copy()
     for i in  [  'a0', 'a1', 'a2']:
         IQR=dfd[i].quantile(0.75)-dfd[i].quantile(0.25)
@@ -2498,20 +1591,108 @@ def pretreatment_linegroup_from_json(df):
     dfd=dfd.reset_index()
     return dfd
 
+def plot_linegroup_parameters(dfd,lbl):
+    total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
+
+    for ai in  ['A1','B1','C1']:
+        mn=dfd[ai].mean()
+        plt.hist(dfd[ai],label=ai,alpha=0.5,density=True)
+        plt.axvline(mn, color='red', linestyle='--', linewidth=1)
+    plt.xlim(total.min(),total.max())
+    plt.legend()
+    plt.title(f'3 Lines Distribution, cluster {lbl}')
+    plt.show()
+
+    mn=total.mean()
+    plt.hist(total)
+    plt.xlim(total.min(),total.max())
+    plt.axvline(mn, color='red', linestyle='--', linewidth=1)
+    plt.title(f'All lines, cluster {lbl}')
+    plt.show()
+
+
+def group_net(data,k=10):
+
+    ids_single_backing,X=data_middlepoints(data)
+
+    scaler=StandardScaler()
+    X=scaler.fit_transform(X.loc[:,['x','y']])
+    X=pd.DataFrame(X,columns=['x','y'])
+
+    neighbors = NearestNeighbors(n_neighbors=k)
+    neighbors_fit = neighbors.fit(X)
+    distances, indices = neighbors_fit.kneighbors(X)
+
+    distances = np.sort(distances[:, k-1], axis=0)
+    second_derivative = np.diff(distances, n=5)
+    inflection_point = np.argmax(second_derivative) + 1
+    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=k, algorithm = "auto")  # Ajusta eps y min_samples según tus datos
+    labels = dbscan.fit_predict(X)
+
+    return labels
+
+
+def plot_net(data,labels,k=10):
+
+    ids_single_backing,X=data_middlepoints(data)
+    plt.figure(figsize=(8, 6))
+
+    # Plot the points and connect them with a line
+    scatter =plt.scatter(X['x'], X['y'], marker='o', c=labels, cmap='viridis', label = labels)
+
+    # for i, label in enumerate(labels):
+    #     plt.annotate(i, (X.iloc[i,0], y.iloc[i,1]), textcoords="offset points", xytext=(0,10), ha='center')
+
+    # Add labels and title
+    plt.xlabel('X-axis')
+    plt.ylabel('Y-axis')
+    plt.title('Sequential Points Connected by a Line')
+    # Show the plot
+    handles, _ = scatter.legend_elements()
+
+    plt.legend(handles, np.unique(labels), title="Labels")
+    plt.grid(True)
+    plt.show()
+
+def plot_full_net(data,labels):
+
+    ids_single_backing,X=data_middlepoints(data)
+
+    fulldata_plot=[]
+    for lbl in np.unique(labels):
+
+        idval_subg=X.loc[labels==lbl,'ids'].to_list()
+
+        parameters,incomplete_vanos=fit_vano_group(data,sublist=idval_subg)
+
+        dfd=pretreatment_linegroup(parameters)
+
+        print(f'\nVanos con un sólo apoyo: {len(ids_single_backing)}')
+        print(f'Vanos incompletos: {len(incomplete_vanos)}')
+        print(f'Incompletos con apoyos: {len([el for el in incomplete_vanos if el not in ids_single_backing])}')
+        print(f'Sin apoyos y completos: {len([el for el in ids_single_backing if el not in incomplete_vanos])}')
+        print(f'Vanos analizados:{dfd.shape[0]}')
+        print(f'Vanos perdidos:{len(parameters)-dfd.shape[0]}\n')
+
+        plot_linegroup_parameters(dfd,str(lbl))
+        total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
+        fulldata_plot.append(total)
+
+    mins=[]
+    maxs=[]
+    for ils,lbl in enumerate(np.unique(labels)):
+        plt.hist(fulldata_plot[ils],label=lbl,alpha=0.5,density=True)
+        mins.append(fulldata_plot[ils].min())
+        maxs.append(fulldata_plot[ils].max())
+
+    plt.xlim(min(mins)-0.2,max(maxs)+0.2)
+    plt.legend()
+    plt.title('All Lines Distribution')
+    plt.show()
+
+
 def data_catenaryparameters_to_df(data):
-    """
-    Convert catenary parameters from the data into a DataFrame.
 
-    This function processes the provided data to extract catenary parameters for each span (vano).
-    It constructs a DataFrame containing the span ID and the parameters 'a0', 'a1', and 'a2'.
-    If a parameter is not present for a specific span, it is filled with NaN.
-
-    Parameters:
-    data (list of dicts): The data containing information about different spans. Each dictionary should
-                        contain keys like 'ID_VANO' and 'CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'.
-    Returns:
-    pd.DataFrame: A DataFrame containing the span IDs and the catenary parameters 'a0', 'a1', and 'a2'.
-    """
     parameters={'id':[],'a0':[],'a1':[],'a2':[]}
     for i in range(len(data)):
         parameters['id'].append(data[i]['ID_VANO'])
