@@ -357,6 +357,81 @@ def ajuste(data, vano):
     p_huecos = float(p_huecos)
 
     return (long_pol1, long_pol2, long_pol3, error_suya, error_nuestra, p_huecos)
+
+def evaluar_ajuste(x_pols, y_pols, rotated_vertices, longitud_vano, clusters):
+    
+    print(type(clusters))
+    
+    y1, z1 = clusters[0][1,:], clusters[0][2,:]
+    y2, z2 = clusters[1][1,:], clusters[1][2,:]
+    y3, z3 = clusters[2][1,:], clusters[2][2,:]
+    
+    x_pol1, x_pol2, x_pol3 = x_pols[0], x_pols[1], x_pols[2]
+    y_pol1, y_pol2, y_pol3 = y_pols[0], y_pols[1], y_pols[2]
+    
+    # Huecos
+    long_pol1 = np.sqrt((rotated_vertices[0][1][0]-rotated_vertices[0][1][-1])**2 + (rotated_vertices[0][2][0]-rotated_vertices[0][2][-1])**2)
+    long_pol2 = np.sqrt((rotated_vertices[1][1][0]-rotated_vertices[1][1][-1])**2 + (rotated_vertices[1][2][0]-rotated_vertices[1][2][-1])**2)
+    long_pol3 = np.sqrt((rotated_vertices[2][1][0]-rotated_vertices[2][1][-1])**2 + (rotated_vertices[2][2][0]-rotated_vertices[2][2][-1])**2)
+
+    # Error su polilínea
+    errorx1_suya = rmse(rotated_vertices[0][1], y1)
+    errory1_suya = rmse(rotated_vertices[0][2], z1)
+    errorx2_suya = rmse(rotated_vertices[1][1], y2)
+    errory2_suya = rmse(rotated_vertices[1][2], z2)
+    errorx3_suya = rmse(rotated_vertices[2][1], y3)
+    errory3_suya = rmse(rotated_vertices[2][2], z3)
+
+    errorp1_suya = np.sqrt(errorx1_suya**2 + errory1_suya**2)
+    errorp2_suya = np.sqrt(errorx2_suya**2 + errory2_suya**2)
+    errorp3_suya = np.sqrt(errorx3_suya**2 + errory3_suya**2)
+
+    error_suya = (errorp1_suya + errorp2_suya + errorp3_suya) / 3
+
+    # Error nuestra polilínea
+    errorx1 = rmse(x_pol1, y1)
+    errory1 = rmse(y_pol1, z1)
+    errorx2 = rmse(x_pol2, y2)
+    errory2 = rmse(y_pol2, z2)
+    errorx3 = rmse(x_pol3, y3)
+    errory3 = rmse(y_pol3, z3)
+
+    errorp1_nuestra = np.sqrt(errorx1**2 + errory1**2)
+    errorp2_nuestra = np.sqrt(errorx2**2 + errory2**2)
+    errorp3_nuestra = np.sqrt(errorx3**2 + errory3**2)
+
+    error_nuestra = (errorp1_nuestra + errorp2_nuestra + errorp3_nuestra) / 3
+
+    # Porcentaje huecos intermedios
+
+    y1, y2, y3 = np.sort(y1, axis=0), np.sort(y2, axis=0), np.sort(y3, axis=0)
+
+    distancias1y = [y1[i]-y1[i+1] for i in range(len(y1)-1)]
+    distancias2y = [y2[i]-y2[i+1] for i in range(len(y2)-1)]
+    distancias3y = [y3[i]-y3[i+1] for i in range(len(y3)-1)]
+
+    distancias1y = np.abs(distancias1y)
+    distancias2y = np.abs(distancias2y)
+    distancias3y = np.abs(distancias3y)
+
+    huecos1 = np.where(distancias1y > 5)
+    huecos2 = np.where(distancias2y > 5)
+    huecos3 = np.where(distancias3y > 5)
+
+    p_huecos_1 = 0
+    for i in range(len(huecos1[0])):
+        p_huecos_1 = p_huecos_1 + (distancias1y[huecos1[0][i]]/longitud_vano)*100
+    p_huecos_2 = 0
+    for i in range(len(huecos2[0])):
+        p_huecos_2 = p_huecos_2 + (distancias2y[huecos2[0][i]]/longitud_vano)*100
+    p_huecos_3 = 0
+    for i in range(len(huecos3[0])):
+        p_huecos_3 = p_huecos_3 + (distancias3y[huecos3[0][i]]/longitud_vano)*100
+
+    p_huecos = (p_huecos_1 + p_huecos_2 + p_huecos_3)/3
+    p_huecos = float(p_huecos)
+
+    return (long_pol1, long_pol2, long_pol3, error_suya, error_nuestra, p_huecos)
     
 def rmse_suya_2(data, vano):
     """
@@ -579,6 +654,92 @@ def puntuación_por_vanos(data, id_vano):
             p_hueco_3 = ((longitud - long_pol3)/longitud)*100
             p_hueco = (p_hueco_1 + p_hueco_2 + p_hueco_3) / 3
             p_hueco = (p_hueco + p_huecos_intermedios) / 2
+            clasificacion1['Flag'].append(f"Tiene 3 o más conductores. Porcentaje de huecos: {p_hueco:.2f}%")
+            clasificacion1['Error polilínea'].append(error_suya)
+            clasificacion1['Error nuestro ajuste'].append(error_nuestra-error_nuestra*p_hueco/100)
+        elif len_conductores == 2:
+            clasificacion1['Reconstrucción'].append("No posible")
+            x1, y1, z1 = get_coord(conductores[0]['VERTICES'])
+            x2, y2, z2 = get_coord(conductores[1]['VERTICES'])
+            long_pol1 = np.sqrt((x1[0]-x1[-1])**2 + (y1[0]-y1[-1])**2)
+            long_pol2 = np.sqrt((x2[0]-x2[-1])**2 + (y2[0]-y2[-1])**2)
+            p_hueco_1 = ((longitud - long_pol1)/longitud)*100
+            p_hueco_2 = ((longitud - long_pol2)/longitud)*100
+            p_hueco = (p_hueco_1 + p_hueco_2) / 2
+            error_suya, p_huecos_intermedios = rmse_suya_2(data, num_iel)
+            p_hueco = (p_hueco + p_huecos_intermedios) / 2
+            clasificacion1['Flag'].append(f"Tiene 2 conductores. Porcentaje de huecos: {p_hueco:.2f}%")
+            clasificacion1['Error polilínea'].append(error_suya)
+            clasificacion1['Error nuestro ajuste'].append(0)
+        elif len_conductores == 1:
+            clasificacion1['Reconstrucción'].append("No posible")
+            x1, y1, z1 = get_coord(conductores[0]['VERTICES'])
+            long_pol1 = np.sqrt((x1[0]-x1[-1])**2 + (y1[0]-y1[-1])**2)
+            p_hueco_1 = ((longitud - long_pol1)/longitud)*100
+            error_suya, p_huecos_intermedios = rmse_suya_1(data, num_iel)
+            p_hueco_1 = (p_hueco_1 + p_huecos_intermedios) / 2
+            clasificacion1['Flag'].append(f"Tiene 1 conductor. Porcentaje de huecos: {p_hueco_1:.2f}%")
+            clasificacion1['Error polilínea'].append(error_suya)
+            clasificacion1['Error nuestro ajuste'].append(0)
+        else:
+            clasificacion1['Reconstrucción'].append("No posible")
+            clasificacion1['Flag'].append('No tiene conductores')
+            clasificacion1['Error polilínea'].append(0)
+            clasificacion1['Error nuestro ajuste'].append(0)
+    else:
+        clasificacion1['Reconstrucción'].append("No posible")
+        apoyos_LIDAR = num_apoyos_LIDAR(data, num_iel)
+        clasificacion1['Error polilínea'].append(0)
+        clasificacion1['Error nuestro ajuste'].append(0)
+        if apoyos_LIDAR == 2:
+            clasificacion1['Flag'].append('No tiene 2 apoyos cartografiados pero tiene 2 apoyos LIDAR.')
+        else:
+            clasificacion1['Flag'].append('No tiene 2 apoyos cartografiados ni 2 apoyos LIDAR.')
+    clasificacion1 = pd.DataFrame(clasificacion1)
+    return(clasificacion1)
+
+
+def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
+    # with open(pathdata, 'r') as archivo:
+    #     data = json.load(archivo)
+
+    clasificacion1 = {
+        'Vano': [],
+        'Reconstrucción': [],
+        'Flag': [],
+        'Error polilínea': [],
+        'Error nuestro ajuste': [],
+    }
+    for iel, el in enumerate(data):
+        if id_vano == el['ID_VANO']:
+            num_el = el
+            num_iel = iel
+            break
+
+    apoyos = num_el['APOYOS']
+    conductores = num_el['CONDUCTORES']
+    len_apoyos = len(apoyos)
+    len_conductores = len(conductores)
+    clasificacion1['Vano'].append(num_el['ID_VANO'])
+    longitud = num_el['LONGITUD_2D']
+    if len_apoyos == 2:
+        if len_conductores >= 3:
+            
+            print(evaluaciones, id_vano)
+            resultados_evaluacion = evaluaciones[id_vano]
+            
+            clasificacion1['Reconstrucción'].append("Posible")
+            
+            long_pol1, long_pol2, long_pol3 = resultados_evaluacion[0], resultados_evaluacion[1], resultados_evaluacion[2]
+            error_suya, error_nuestra = resultados_evaluacion[3], resultados_evaluacion[4]
+            p_huecos_intermedios = resultados_evaluacion[5]
+            
+            p_hueco_1 = ((longitud - long_pol1)/longitud)*100
+            p_hueco_2 = ((longitud - long_pol2)/longitud)*100
+            p_hueco_3 = ((longitud - long_pol3)/longitud)*100
+            p_hueco = (p_hueco_1 + p_hueco_2 + p_hueco_3) / 3
+            p_hueco = (p_hueco + p_huecos_intermedios) / 2
+            
             clasificacion1['Flag'].append(f"Tiene 3 o más conductores. Porcentaje de huecos: {p_hueco:.2f}%")
             clasificacion1['Error polilínea'].append(error_suya)
             clasificacion1['Error nuestro ajuste'].append(error_nuestra-error_nuestra*p_hueco/100)

@@ -1,7 +1,7 @@
 import plotly.graph_objects as go
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
-from catenaria.notebooks.old_modules.modules_fit import *
+# from catenaria.notebooks.old_modules.modules_fit import *
 
 #### FUNCTIONS TO PLOT DATA AND FITS ####
 

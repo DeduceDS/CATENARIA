@@ -2006,14 +2006,17 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
 
                     dataf['flag'].append('bad_backing')
                     dataf['line_number'].append(0)
-                    if any([plot_filter=='all',plot_filter=='bad_backing']):
-                        continue
-                        # plot_vano(f'{idv} Bad_Backing',X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
-                        
                     extremos_values = define_backings(vano_length,apoyo_values)
                     
                     if extremos_values == -1:
                         continue
+                    
+                    if any([plot_filter=='all',plot_filter=='bad_backing']):
+                        continue
+                        # plot_vano(f'{idv} Bad_Backing',X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
+                        
+                    
+                        
                 
                 mat,rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
                 rotated_ymin=min(rotated_conds[1])

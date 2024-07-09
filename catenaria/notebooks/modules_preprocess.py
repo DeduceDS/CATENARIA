@@ -422,8 +422,8 @@ def define_backings(vano_length,apoyo_values):
 
         apoyo = np.array(apoyo_values)[:, labels == lab]
 
-        mean_x = np.mean(apoyo[0,:])
-        mean_y = np.mean(apoyo[1,:])
+        mean_x = np.mean(apoyo[1,:])
+        mean_y = np.mean(apoyo[0,:])
         mean_z = np.mean(apoyo[2,:])
         
         c_mass = np.array([mean_x, mean_y, mean_z])

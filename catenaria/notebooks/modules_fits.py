@@ -70,11 +70,11 @@ def clustering_prefit_1(x,y,z):
             y3.append(y[j])
             z3.append(z[j])
 
-    x1, y1, z1 = np.array(x1), np.array(y1), np.array(z1)
-    x2, y2, z2 = np.array(x2), np.array(y2), np.array(z2)
-    x3, y3, z3 = np.array(x3), np.array(y3), np.array(z3)
-    
-    return np.array([[x1,y1,z1],[x2,y2,z2],[x3,y3,z3]])
+    x1, y1, z1 = np.array(x1), np.array(y1), np.array(z1).reshape(-1,1)
+    x2, y2, z2 = np.array(x2), np.array(y2), np.array(z2).reshape(-1,1)
+    x3, y3, z3 = np.array(x3), np.array(y3), np.array(z3).reshape(-1,1)
+
+    return [np.array([x1,y1,z1]),np.array([x2,y2,z2]),np.array([x3,y3,z3])]
     
 def PCA_filtering_prefit_1(x, y, z):
     
@@ -93,7 +93,7 @@ def PCA_filtering_prefit_1(x, y, z):
     return x_filt_cond, y_filt_cond, z_filt_cond
 
 def filtering_prefit_1(rotated_conds, extremos_values):
-    
+
     X_extremos = extremos_values[0]
     Y_extremos = extremos_values[1]
     Z_extremos = extremos_values[2]
@@ -147,6 +147,6 @@ def fit_3D_coordinates(y_values, z_values, fit_function, initial_params):
 
     y_pol = np.interp(x_pol, scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten(), fitted_z_vals, period=len(fitted_z_vals))
     
-    RMSE_z, max_z, pearson_z = get_metrics(fitted_z_vals_scaled)
+    RMSE_z, max_z, pearson_z = get_metrics(fitted_z_vals_scaled, z_vals_scaled)
     
     return x_pol, y_pol, parametros, [RMSE_z, max_z, pearson_z]

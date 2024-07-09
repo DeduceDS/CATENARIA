@@ -4,6 +4,7 @@ from modules_clustering import *
 from modules_preprocess import *
 from modules_plots import *
 from modules_fits import *
+from loguru import logger
 
 def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=False,label=''):
     """
@@ -345,6 +346,7 @@ def fit_plot_vano_group(data,sublist=[],plot_filter=None,init=0,end=None,save=Fa
     datafr=pd.DataFrame(dataf)
     return datafr
 
+import time
 
 def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=False,label=''):
     """
@@ -393,11 +395,15 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
     rmses = []
     maxes = []
     correlations = []
+    evaluaciones = dict()
     
     for i in range(len(data)):
 
         if all([i>=init,i<=end]):
-
+            
+            # Start the timer
+            start_time = time.time()
+            
             idv=data[i]['ID_VANO']
             vano_length=data[i]["LONGITUD_2D"]
             dataf['id'].append(idv)
@@ -424,12 +430,25 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                 data[i]['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)']={}
                 data[i]['PUNTUACIONES']={}
 
+                end_time = time.time()
+                
+                print(f"First time {end_time-start_time}")
+                
                 if np.array(extremos_values).shape[1]!=4:
+                    
+                    # Start the timer
+                    start_time1 = time.time()
                     
                     dataf['flag'].append('bad_backing')
                     dataf['line_number'].append(0)
                     
+                    print("Redefining backings")
+                    
                     extremos_values = define_backings(vano_length,apoyo_values)
+                    
+                    end_time1 = time.time()
+                    
+                    print(f"Second time {end_time1-start_time1}")
                     
                     if extremos_values == -1:
                         continue
@@ -454,7 +473,9 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
 
                 # y=((data[i]['APOYOS'][0]['COORDEANDA_Y'] + data[i]['APOYOS'][1]['COORDEANDA_Y']) / 2)
                 # x=((data[i]['APOYOS'][0]['COORDENADA_X'] + data[i]['APOYOS'][1]['COORDENADA_X']) / 2)
-
+                
+                start_time2 = time.time()
+                
                 mat,rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
                 rotated_ymin=min(rotated_conds[1])
                 rotated_ymax=max(rotated_conds[1])
@@ -498,6 +519,10 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                     greater_var_z_than_x.append(True if fl>=0 else False)
                     c.append(centroids0)
                     ncl.append(len(centroids0))
+                    
+                end_time2 = time.time()
+                
+                print(f"Third time {end_time2-start_time2}")
 
                 md=mode(ncl)
                 var_z_x=mode(greater_var_z_than_x)
@@ -522,7 +547,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         # plot_vano('{} Empty{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
                         pass
 
-                elif md!=3:
+                elif md!=3 and md!= 6:
                     dataf['flag'].append('bad_line_number')
                     if any([plot_filter=='all',plot_filter=='bad_line_number']):
                         # plot_vano('{} Bad_Line_Number{}'.format(idv, ' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
@@ -532,15 +557,27 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
 
                     try:
                         
+                        
+                        # print(np.array(rotated_conds).shape)
+                        # Matriz de rotación
+                        mat, rotated_conds = rotate_points(cond_values, extremos_values)
+                        extremos_values = mat.dot(extremos_values)
+                        # print(np.array(rotated_conds).shape)
+                        
                         x, y, z = filtering_prefit_1(rotated_conds, extremos_values)
+                        
+                        # x, y, z = np.array(rotated_conds)[0], np.array(rotated_conds)[1], np.array(rotated_conds)[2]
+                        
                                 
                         ########################
                         
                         clusters = clustering_prefit_1(x,y,z)
                         
-                        x1, y1, z1 = clusters[0,0], clusters[1,0], clusters[2,0]
-                        x2, y2, z2 = clusters[0,1], clusters[1,1], clusters[2,1]
-                        x3, y3, z3 = clusters[0,2], clusters[1,2], clusters[2,2]
+                        x1, y1, z1 = clusters[0][0,:], clusters[0][1,:], clusters[0][2,:]
+                        x2, y2, z2 = clusters[1][0,:], clusters[1][1,:], clusters[1][2,:]
+                        x3, y3, z3 = clusters[2][0,:], clusters[2][1,:], clusters[2][2,:]
+                        
+                        print(type(clusters), type(clusters[0]))
                         
                         ################
                         
@@ -549,6 +586,10 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         x_filt_cond3, y_filt_cond3, z_filt_cond3 = PCA_filtering_prefit_1(x3, y3, z3)
                         
                         #############################
+                        
+                        end_time3 = time.time()
+                        
+                        print(f"Fourth time {end_time3-end_time2}")
                         
                         # Función de la catenaria
                         from sklearn.preprocessing import StandardScaler
@@ -568,33 +609,44 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         x_pol2, y_pol2, parametros2, metrics2 = fit_3D_coordinates(y_filt_cond2, z_filt_cond2, catenaria, p0)
                         x_pol3, y_pol3, parametros3, metrics3 = fit_3D_coordinates(y_filt_cond3, z_filt_cond3, catenaria, p0)
                         
+                        end_time4 = time.time()
+                        
+                        print(f"Fifth time {end_time4-end_time3}")
+
                         ########################## TONI
                         from scipy.stats import pearsonr, spearmanr
                         
                         rmses.append([metrics1[0], metrics2[0], metrics3[0]])
                         maxes.append([metrics1[1], metrics2[1], metrics3[1]])
                         correlations.append([metrics1[2], metrics2[2], metrics3[2]])
+                        
+                        resultados_eval = evaluar_ajuste([x_pol1, x_pol2, x_pol3], [y_pol1, y_pol2, y_pol3], rotated_vertices, vano_length, clusters)
+                        evaluaciones[idv] = resultados_eval
+                        
+                        end_time5 = time.time()
+                        
+                        print(f"Sixth time {end_time5-end_time4}")
                 
                         #########################
                         
-                        plt.figure(figsize=(10, 6))
-                        # Pintamos los puntos de cada cable
-                        plt.scatter(y1, z1, color='coral', s=30)
-                        plt.scatter(y2, z2, color='lightblue', s=30)
-                        plt.scatter(y3, z3, color='lightgreen', s=30)
+                        # plt.figure(figsize=(10, 6))
+                        # # Pintamos los puntos de cada cable
+                        # plt.scatter(y1, z1, color='coral', s=30)
+                        # plt.scatter(y2, z2, color='lightblue', s=30)
+                        # plt.scatter(y3, z3, color='lightgreen', s=30)
 
-                        # Pintamos las polilíneas que hemos generado
-                        plt.plot(x_pol1, y_pol1, color='red', label='P1')
-                        plt.plot(x_pol2, y_pol2, color='blue', label='P2')
-                        plt.plot(x_pol3, y_pol3, color='green', label='P3')
+                        # # Pintamos las polilíneas que hemos generado
+                        # plt.plot(x_pol1, y_pol1, color='red', label='P1')
+                        # plt.plot(x_pol2, y_pol2, color='blue', label='P2')
+                        # plt.plot(x_pol3, y_pol3, color='green', label='P3')
 
-                        plt.legend()
-                        plt.title(idv)
-                        plt.show()
+                        # plt.legend()
+                        # plt.title(idv)
+                        # plt.show()
                 
-                        x_fit1 = np.repeat(pd.Series(x1.flatten()).quantile(0.5),1000)
-                        x_fit2 = np.repeat(pd.Series(x2.flatten()).quantile(0.5),1000)
-                        x_fit3 = np.repeat(pd.Series(x3.flatten()).quantile(0.5),1000)
+                        x_fit1 = np.repeat(pd.Series(x1.flatten()).quantile(0.5),500)
+                        x_fit2 = np.repeat(pd.Series(x2.flatten()).quantile(0.5),500)
+                        x_fit3 = np.repeat(pd.Series(x3.flatten()).quantile(0.5),500)
                         # print(x_pol1)
                         # print(y_pol1)
                         # print(x_fit1)
@@ -621,8 +673,11 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         # crossesa=np.vstack(crossesa).T#(crossesa[0],crossesa[1],crossesa[2])
                         # print(crossesa)
                         # crossesb=np.vstack(crossesb).T
-                    except:
+                    except Exception as e:
+                        
+                        raise ValueError(e)
                         bad_fit=1
+                        continue
 
                     if bad_cluster==1:
                         if all([md==3,var_z_x]):
@@ -643,13 +698,14 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                     elif good==1:
                         dataf['flag'].append('good_fit')
                         if any([plot_filter=='good_fit',plot_filter=='all']):
+                            pass
                             # plot_vano('{} Good_Fit{}'.format(idv,' '+finc[0]),X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
                             # print(cond_values[0])
                             # print(cond_values[1])
                             # print(cond_values[2])
-                            plot_fit_2('{} Good_Fit{}'.format(idv,' '+finc[0]),cond_values, apoyo_values, vert_values,fits)
+                            # plot_fit_2('{} Good_Fit{}'.format(idv,' '+finc[0]),cond_values, apoyo_values, vert_values,fits)
 
-                puntuacion=puntuación_por_vanos(data, idv).to_json()
+                puntuacion=puntuación_por_vanos_sin_ajuste(data, idv, evaluaciones).to_json()
                 puntuacion_dict = json.loads(puntuacion)
                 for n in puntuacion_dict:
                     puntuacion_dict[n]=puntuacion_dict[n]["0"]
@@ -659,5 +715,9 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                 del puntuacion_dict['Vano']
                 data[i]['PUNTUACIONES']=puntuacion_dict
                 print(puntuacion_dict)
+                
+                end_time6 = time.time()
+                print(f"Seventh time {end_time6-end_time5}")
+                
     return data, rmses, maxes, correlations
 
