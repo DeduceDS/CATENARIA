@@ -171,12 +171,19 @@ def clean_outliers(rotated_conds, rotated_extremos):
     - The function assumes that the input arrays are properly rotated and aligned.
     """
     
+    print(f"Shape 0: {np.array(rotated_extremos).shape}")
+    
     #Get left and right extreme values
     left = np.max([rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
     right = np.min([rotated_extremos.T[0][1],rotated_extremos.T[1][1]])
 
+    print(right-left)
+    print(rotated_extremos)
+    
     # Filter points within the specified boundaries
     cropped_conds = rotated_conds[:, (right > rotated_conds[1,:]) & (rotated_conds[1,:] > left)]
+    
+    print(f"Shape 1: {cropped_conds.shape}")
 
     # Paso 1: Calcular el histograma de las coordenadas Y
     hist, bin_edges = np.histogram(cropped_conds[1, :], bins=200)
@@ -210,7 +217,9 @@ def clean_outliers(rotated_conds, rotated_extremos):
 
     if threshold_y_lower is not None:
         cropped_conds = cropped_conds[:, cropped_conds[1, :] < threshold_y_lower]
-
+        
+    print(f"Shape 2: {cropped_conds.shape}")
+    
     # Calcular percentiles 1 y 99
     p1 = np.percentile(cropped_conds[1, :], 2)
     p99 = np.percentile(cropped_conds[1, :], 98)
@@ -405,8 +414,6 @@ def define_backings(vano_length,apoyo_values):
         for each support. If the distance between centroids deviates significantly from the span length,
         returns -1.
     """
-    
-    print(f"We lack of extreme values: {len(extremos_values[2]) != 4}")
                     
     invertedxy = np.zeros((np.array(apoyo_values).shape))
     invertedxy[1,:] = (np.array(apoyo_values))[0,:]
@@ -432,6 +439,9 @@ def define_backings(vano_length,apoyo_values):
 
     dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
     extremos = np.array(extremos).T
+    
+    # Repeat each element twice along the last axis
+    extremos_values = np.repeat(extremos, 2, axis=1)
 
     # print(f"Distance between mean points: {dist}")
 
@@ -461,6 +471,9 @@ def define_backings(vano_length,apoyo_values):
         dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
         extremos = np.array(extremos).T
         
+        # Repeat each element twice along the last axis
+        extremos_values = np.repeat(extremos, 2, axis=0)
+        
         if 100*abs(dist - vano_length)/vano_length > 10.0:
             
             print(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
@@ -473,8 +486,5 @@ def define_backings(vano_length,apoyo_values):
             plt.show()
             
             return -1
-
-        # Repeat each element twice along the last axis
-        extremos_values = np.repeat(extremos, 2, axis=1)
-
-    return extremos_values
+        
+    return list(extremos_values)

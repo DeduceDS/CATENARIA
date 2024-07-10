@@ -360,7 +360,7 @@ def ajuste(data, vano):
 
 def evaluar_ajuste(x_pols, y_pols, rotated_vertices, longitud_vano, clusters):
     
-    print(type(clusters))
+    # print(type(clusters))
     
     y1, z1 = clusters[0][1,:], clusters[0][2,:]
     y2, z2 = clusters[1][1,:], clusters[1][2,:]

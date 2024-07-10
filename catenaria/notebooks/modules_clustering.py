@@ -20,13 +20,14 @@ def initialize_centroids(points, n_clusters):
     Returns:
     numpy.ndarray: The initialized centroids.
     """
-
     centroids = np.zeros((n_clusters))
-
+    
     centroids[0] = np.min(points[0,:])
-    centroids[1] = np.mean(points[0,:])
-    centroids[2] = np.max(points[0,:])
-
+    centroids[1] = np.max(points[0,:])
+    
+    if n_clusters > 2:
+        centroids[2] = np.mean(points[0,:])
+    
     return centroids
 
 def assign_clusters(points, centroids):
@@ -83,13 +84,13 @@ def kmeans_clustering(points, n_clusters, max_iterations):
         labels = assign_clusters(points, centroids)
         new_centroids = update_centroids(points, labels, n_clusters)
         if np.allclose(new_centroids, centroids):
-            # print(f"Convergence reached at iteration {iteration}")
             break
         centroids = new_centroids
 
-    print(labels.shape)
-    print(np.unique(labels))
-    print(centroids.shape)
+    # print(labels.shape)
+    # print(np.unique(labels))
+    # print(centroids.shape)
+    
     return labels, centroids
 
 
@@ -165,7 +166,7 @@ def flatten_sublist(sublist):
     
     flat_list = [sublist[0]]
     for array in sublist[1:]:
-        print(array)
+        # print(array)
         flat_list.extend(array.tolist())
     return flat_list
 
