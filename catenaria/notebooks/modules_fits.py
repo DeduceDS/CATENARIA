@@ -2,7 +2,7 @@ import numpy as np
 from scipy.stats import pearsonr, spearmanr
 import matplotlib.pyplot as plt
 import numpy as np
-
+import time
 from sklearn.metrics import root_mean_squared_error as rmse
 from sklearn.metrics import mean_absolute_error as ma
 from scipy.stats import pearsonr
@@ -10,7 +10,7 @@ from sklearn.preprocessing import StandardScaler
 from scipy.optimize import curve_fit
 from sklearn.cluster import SpectralClustering
 from sklearn.decomposition import PCA
-
+from loguru import logger
 
 def catenaria(x, a, h, k):
     x = np.asarray(x).flatten()
@@ -76,6 +76,30 @@ def clustering_prefit_1(x,y,z):
     x3, y3, z3 = np.array(x3), np.array(y3), np.array(z3).reshape(-1,1)
 
     return [np.array([x1,y1,z1]),np.array([x2,y2,z2]),np.array([x3,y3,z3])]
+
+
+def clustering_prefit_2(x, y, z):
+    
+    time1 = time.time()
+    
+    X = np.hstack((x.reshape(-1, 1), y.reshape(-1, 1)))
+    
+    model = SpectralClustering(n_clusters=3, affinity='nearest_neighbors', random_state=0)
+    y_spectral = model.fit_predict(X)
+    
+    time2 = time.time()
+    logger.debug(f"clustering time 1 {time2-time1}")
+    
+    clusters = [[], [], []]
+    for i in range(3):
+        mask = (y_spectral == i)
+        clusters[i] = np.vstack((x[mask], y[mask], z[mask]))
+        
+    time3 = time.time()
+    logger.debug(f"clustering time 2 {time3-time2}")
+    
+    return clusters
+
     
 def PCA_filtering_prefit_1(x, y, z):
     
@@ -92,6 +116,26 @@ def PCA_filtering_prefit_1(x, y, z):
     # Filter the values that fall between the min and max values of the second component
     f_ind = (data_2d_pca_cond[:,1] > y_min_cond) & (data_2d_pca_cond[:,1] < y_max_cond)
     x_filt_cond, y_filt_cond, z_filt_cond = x[f_ind], y[f_ind], z[f_ind]
+
+    return x_filt_cond, y_filt_cond, z_filt_cond
+
+def PCA_filtering_prefit_2(x, y, z):
+    
+    # Stack y and z coordinates for PCA
+    data_2d_cond = np.column_stack((y, z))
+
+    # Fit the PCA model and transform the data
+    pca = PCA(n_components=2)
+    data_2d_pca_cond = pca.fit_transform(data_2d_cond)
+    
+    # Extract min and max values of the second PCA component
+    y_min_cond, y_max_cond = np.min(data_2d_pca_cond[:, 1]), np.max(data_2d_pca_cond[:, 1])
+
+    # Filter the values that fall between the min and max values of the second component
+    mask = (data_2d_pca_cond[:, 1] > y_min_cond) & (data_2d_pca_cond[:, 1] < y_max_cond)
+    x_filt_cond = x[mask]
+    y_filt_cond = y[mask]
+    z_filt_cond = z[mask]
 
     return x_filt_cond, y_filt_cond, z_filt_cond
 
@@ -118,6 +162,18 @@ def filtering_prefit_1(rotated_conds, extremos_values):
             z.append(Z_cond[j])
             
     return x,y,z
+
+
+def filtering_prefit_2(rotated_conds, extremos_values):
+    X_extremos, Y_extremos, Z_extremos = extremos_values
+    X_cond, Y_cond, Z_cond = rotated_conds
+
+    mask = (Y_cond > np.min(Y_extremos)) & (Y_cond < np.max(Y_extremos))
+    x = X_cond[mask]
+    y = Y_cond[mask]
+    z = Z_cond[mask]
+
+    return x, y, z
 
 
 def fit_3D_coordinates(y_values, z_values, fit_function, initial_params):
@@ -198,7 +254,7 @@ def fit_3D_coordinates_2(y_values, z_values, fit_function, initial_params):
     fitted_z_pol = scaler_z.inverse_transform(fitted_z_pol_scaled.reshape(-1, 1)).flatten()
 
     # Interpolate the fitted values to the same length as y_pol for the 3D representation
-    z_pol = np.interp(y_pol, scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten(), fitted_z_vals, period=len(fitted_z_vals))
+    # z_pol = np.interp(y_pol, scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten(), fitted_z_vals, period=len(fitted_z_vals))
     
     RMSE_z, max_z, pearson_z, spearman_z = get_metrics(fitted_z_vals_scaled, z_vals_scaled)
     

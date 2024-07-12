@@ -360,8 +360,6 @@ def ajuste(data, vano):
 
 def evaluar_ajuste(x_pols, y_pols, rotated_vertices, longitud_vano, clusters):
     
-    # print(type(clusters))
-    
     y1, z1 = clusters[0][1,:], clusters[0][2,:]
     y2, z2 = clusters[1][1,:], clusters[1][2,:]
     y3, z3 = clusters[2][1,:], clusters[2][2,:]
@@ -725,7 +723,6 @@ def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
     if len_apoyos == 2:
         if len_conductores >= 3:
             
-            print(evaluaciones, id_vano)
             resultados_evaluacion = evaluaciones[id_vano]
             
             clasificacion1['Reconstrucción'].append("Posible")

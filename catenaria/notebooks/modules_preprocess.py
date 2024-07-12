@@ -8,6 +8,7 @@ import open3d as o3d
 from puntuacion import *
 from modules_utils import *
 from modules_clustering import *
+from loguru import logger
 
 #### FUNCTIONS TO TRANSFORM/PREPROCESS 3D POINTS ####
 
@@ -171,19 +172,19 @@ def clean_outliers(rotated_conds, rotated_extremos):
     - The function assumes that the input arrays are properly rotated and aligned.
     """
     
-    print(f"Shape 0: {np.array(rotated_extremos).shape}")
+    # print(f"Shape 0: {np.array(rotated_extremos).shape}")
     
     #Get left and right extreme values
     left = np.max([rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
     right = np.min([rotated_extremos.T[0][1],rotated_extremos.T[1][1]])
 
-    print(right-left)
-    print(rotated_extremos)
+    # print(right-left)
+    # print(rotated_extremos)
     
     # Filter points within the specified boundaries
     cropped_conds = rotated_conds[:, (right > rotated_conds[1,:]) & (rotated_conds[1,:] > left)]
     
-    print(f"Shape 1: {cropped_conds.shape}")
+    # print(f"Shape 1: {cropped_conds.shape}")
 
     # Paso 1: Calcular el histograma de las coordenadas Y
     hist, bin_edges = np.histogram(cropped_conds[1, :], bins=200)
@@ -204,12 +205,12 @@ def clean_outliers(rotated_conds, rotated_extremos):
     # Verificar si hay una línea horizontal significativa en la parte superior
     if hist[peak_bin_upper] > threshold_density:
         threshold_y_upper = bin_edges[peak_bin_upper + 1]  # El +1 es para obtener el borde superior del bin
-        print(f"Umbral de corte inferior detectado: {threshold_y_upper}")
+        logger.debug(f"Umbral de corte superior detectado: {threshold_y_upper}")
 
     # Verificar si hay una línea horizontal significativa en la parte inferior
     if hist[peak_bin_lower] > threshold_density:
         threshold_y_lower = bin_edges[peak_bin_lower]  # No se necesita ajustar más
-        print(f"Umbral de corte superior detectado: {threshold_y_lower}")
+        logger.debug(f"Umbral de corte superior detectado: {threshold_y_lower}")
 
     # Paso 3: Filtrar los puntos usando los umbrales detectados
     if threshold_y_upper is not None:
@@ -218,7 +219,7 @@ def clean_outliers(rotated_conds, rotated_extremos):
     if threshold_y_lower is not None:
         cropped_conds = cropped_conds[:, cropped_conds[1, :] < threshold_y_lower]
         
-    print(f"Shape 2: {cropped_conds.shape}")
+    # print(f"Shape 2: {cropped_conds.shape}")
     
     # Calcular percentiles 1 y 99
     p1 = np.percentile(cropped_conds[1, :], 2)
@@ -443,7 +444,14 @@ def define_backings(vano_length,apoyo_values):
     # Repeat each element twice along the last axis
     extremos_values = np.repeat(extremos, 2, axis=1)
 
-    # print(f"Distance between mean points: {dist}")
+    logger.debug(f"Distance between mean points: {dist}")
+    
+    plt.scatter(invertedxy[0], invertedxy[1], c=labels, cmap='viridis', s=1)
+    plt.vlines(centroids, ymin=np.min(invertedxy[1]), ymax=np.max(invertedxy[1]), color='red')
+    plt.title('Custom 1D K-means Clustering')
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+    plt.show()
 
     if 100*abs(dist - vano_length)/vano_length > 10.0: # data[i]["LONGITUD_2D"]
         
@@ -466,18 +474,20 @@ def define_backings(vano_length,apoyo_values):
             extremos.append(c_mass)
             apoyos.append(apoyo)
         
-        print("Invertir coordenadas")
+
+        logger.debug(f"Invertir coordenadas")
         
         dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
         extremos = np.array(extremos).T
         
         # Repeat each element twice along the last axis
-        extremos_values = np.repeat(extremos, 2, axis=0)
+        extremos_values = np.repeat(extremos, 2, axis=1)
         
         if 100*abs(dist - vano_length)/vano_length > 10.0:
+
+            logger.debug(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
+            logger.debug("SOLO HAY 1 APOYO")
             
-            print(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
-            print("SOLO HAY 1 APOYO")
             plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
             plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
             plt.title('Custom 1D K-means Clustering')
@@ -486,5 +496,8 @@ def define_backings(vano_length,apoyo_values):
             plt.show()
             
             return -1
+
+    extremos_values[2, 0] = extremos_values[2, 2]
+    extremos_values[2, 3] = extremos_values[2, 1]
         
-    return list(extremos_values)
+    return extremos_values
