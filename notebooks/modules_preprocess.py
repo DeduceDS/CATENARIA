@@ -10,6 +10,134 @@ from modules_utils import *
 from modules_clustering import *
 from loguru import logger
 
+def get_bad_data(pathdata):
+    
+    bad_ids = get_bad_ids(pathdata.split("json")[0]+"txt")
+
+    with open(pathdata, 'r') as archivo:
+        data = json.load(archivo)
+        
+    # print(len(data), bad_ids)
+
+    bad_data_df = extract_preprocess_errors(data, bad_ids)
+
+    bad_data = [data[i] for i in bad_data_df["num"]]
+
+    return bad_data_df, bad_data
+
+def extract_preprocess_errors(data, bad_ids):
+
+    succeed_preprocess = []
+    failed_preprocess = []
+    errors = []
+    num = []
+
+    for i in range(len(data)):
+        
+        print(f"\nProcessing Vano {i}")
+        
+        vano_id = data[i]['ID_VANO']
+        
+        # if vano_id in bad_ids:
+        #     print("Vano skiped ", i)
+        #     continue
+        
+        try:
+            
+            cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
+            rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
+            succeed_preprocess.append(vano_id)
+            
+        except Exception as e:
+            
+            failed_preprocess.append(vano_id)
+            errors.append(e)
+            num.append(i)
+            print(f"Vano {vano_id} failed preprocess: {e}")
+            
+def get_new_extreme_values(data):
+
+    nuevos_extremos = []
+    nuevos_extremos_ids = []
+    un_apoyo_ids = []
+
+    for i in range(len(data)):
+        
+        print(f"\nProcessing vano {i}")
+        
+        cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
+
+        print(f"We lack of extreme values: {len(extremos_values[2]) != 4}")
+        
+        # Standard scaling
+        scaler = StandardScaler()
+        scaled_points = scaler.fit_transform(np.array(apoyo_values))
+        
+        labels, centroids = kmeans_clustering(scaled_points, 2, 500)
+        
+        points = scaler.inverse_transform(scaled_points)
+        
+        extremos = []
+
+        for lab in np.unique(labels):
+
+            apoyo = points[:, labels == lab]
+
+            mean_x = np.mean(apoyo[0,:])
+            mean_y = np.mean(apoyo[1,:])
+            mean_z = np.mean(apoyo[2,:])
+            
+            c_mass = np.array([mean_x, mean_y, mean_z])
+            extremos.append(c_mass)
+        
+
+        dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
+        extremos = np.array(extremos).T
+        
+        print(f"Distance between mean points: {dist}")
+        # print(f"New extreme values: {extremos}")
+        
+        if 100*abs(dist - data[i]["LONGITUD_2D"])/data[i]["LONGITUD_2D"] > 10.0:
+            
+            print(f"Proportional absolut error of distance = {100*abs(dist - data[i]['LONGITUD_2D'])/data[i]['LONGITUD_2D']}")
+            print("SOLO HAY 1 APOYO")
+            
+            plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
+            plt.scatter(extremos[0,:], extremos[1,:], s = 10, color = "blue")
+            # plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
+            plt.title('Custom 1D K-means Clustering')
+            plt.xlabel('X Coordinate')
+            plt.ylabel('Y Coordinate')
+            plt.show()
+                
+            # plot_data("test",cond_values, apoyo_values, vert_values, extremos)
+            
+            un_apoyo_ids.append(data[i]["ID_VANO"])
+            continue
+        
+        nuevos_extremos.append(extremos)
+        nuevos_extremos_ids.append(data[i]["ID_VANO"])
+        # plot_data("test",cond_values, apoyo_values, vert_values, extremos)
+    return np.array(nuevos_extremos), nuevos_extremos_ids, un_apoyo_ids
+
+
+def mod_extremos(data,new_extremos,ids):
+    
+    for id in ids:
+        
+        idx, vano = look_for_vano(data,id)
+        new_apoyos = []
+        
+        for j in range(2):
+            
+            new_apoyos.append({"COORDENADA_X": list(new_extremos[0,j]), "COORDENADA_Y": list(new_extremos[1,j]), "COORDENADAS_Z": list(new_extremos[2,j])})
+        # print(vano["APOYOS"])
+        vano['APOYOS'] = new_apoyos
+        # print(new_apoyos)
+        data[idx] = vano
+            
+    return data
+
 #### FUNCTIONS TO TRANSFORM/PREPROCESS 3D POINTS ####
 
 def pretreatment_linegroup(parameters):
@@ -354,7 +482,22 @@ def un_scale_conductor(X,scaler_x,scaler_y,scaler_z):
 
     return X_unscaled
 
-#### FUNCTIONS TO MODIFY/CORRECT ORIGINAL DATA####
+#### FUNCTIONS TO MODIFY/CORRECT ORIGINAL DATA ####
+
+def num_apoyos_LIDAR(data, vano):
+    puntos_apoyos = data[vano]['LIDAR']['APOYOS']
+
+    x_vals_apoyos, y_vals_apoyos, z_vals_apoyos = get_coord(puntos_apoyos)
+
+    X = np.column_stack((y_vals_apoyos, z_vals_apoyos))
+    kmeans = KMeans(n_clusters=2, random_state=0, n_init='auto').fit(X)
+
+    centros = kmeans.cluster_centers_
+    dif = 2
+    if centros[0][0] - dif <= centros[1][0] < centros[0][0] + dif:
+        return 1
+    else:
+        return 2
 
 def data_middlepoints(data):
     """
