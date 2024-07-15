@@ -540,7 +540,7 @@ def data_middlepoints(data):
 
     return ids_bad_backing,X
 
-def define_backings(vano_length,apoyo_values):
+def define_backings(vano_length, apoyo_values):
     """
     Define the backings (extremos) based on the length of the span and the coordinates of the supports.
 
@@ -582,19 +582,9 @@ def define_backings(vano_length,apoyo_values):
         apoyos.append(apoyo)
 
     dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
-    extremos = np.array(extremos).T
-    
-    # Repeat each element twice along the last axis
-    extremos_values = np.repeat(extremos, 2, axis=1)
+    extremos = np.array(extremos)
 
     logger.debug(f"Distance between mean points: {dist}")
-    
-    plt.scatter(invertedxy[0], invertedxy[1], c=labels, cmap='viridis', s=1)
-    plt.vlines(centroids, ymin=np.min(invertedxy[1]), ymax=np.max(invertedxy[1]), color='red')
-    plt.title('Custom 1D K-means Clustering')
-    plt.xlabel('X Coordinate')
-    plt.ylabel('Y Coordinate')
-    plt.show()
 
     if 100*abs(dist - vano_length)/vano_length > 10.0: # data[i]["LONGITUD_2D"]
         
@@ -621,10 +611,7 @@ def define_backings(vano_length,apoyo_values):
         logger.debug(f"Invertir coordenadas")
         
         dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
-        extremos = np.array(extremos).T
-        
-        # Repeat each element twice along the last axis
-        extremos_values = np.repeat(extremos, 2, axis=1)
+        extremos = np.array(extremos)
         
         if 100*abs(dist - vano_length)/vano_length > 10.0:
 
@@ -640,7 +627,13 @@ def define_backings(vano_length,apoyo_values):
             
             return -1
 
-    extremos_values[2, 0] = extremos_values[2, 2]
-    extremos_values[2, 3] = extremos_values[2, 1]
+    z_vals = [np.array(extremos)[0,2], np.array(extremos)[1,2], np.array(extremos)[0,2], np.array(extremos)[0,2]]
+    y_vals =  np.stack([np.array(extremos)[0,1], np.array(extremos)[0,1], np.array(extremos)[1,1], np.array(extremos)[1,1],
+                        np.array(extremos)[0,1], np.array(extremos)[0,1], np.array(extremos)[1,1], np.array(extremos)[1,1]])
+    
+    x_vals =  np.stack([np.array(extremos)[0,0], np.array(extremos)[0,0], np.array(extremos)[1,0], np.array(extremos)[1,0],
+                        np.array(extremos)[0,0], np.array(extremos)[0,0], np.array(extremos)[1,0], np.array(extremos)[1,0]])
+    
+    extremos_values = [x_vals, y_vals, z_vals]
         
     return extremos_values

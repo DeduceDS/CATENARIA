@@ -10,7 +10,7 @@ import time
 from loguru import logger
 import sys
 
-def analyze_backings(dataf, vano_length, idv, cond_values, apoyo_values, vert_values, extremos_values):
+def analyze_backings(vano_length, idv, cond_values, apoyo_values, vert_values, extremos_values, dataf=None):
     
     # Start the timer
     start_time1 = time.time()
@@ -32,8 +32,12 @@ def analyze_backings(dataf, vano_length, idv, cond_values, apoyo_values, vert_va
         # Set the line value of this element as 0 ****
         logger.warning("UN APOYO LIDAR")
         plot_data(f"{idv}",cond_values, apoyo_values, vert_values, extremos_values)
-        dataf['flag'].append('bad_backing')
-        dataf['line_number'].append(0)
+        
+        if dataf != None:
+            
+            dataf['flag'].append('bad_backing')
+            dataf['line_number'].append(0)
+        
         return -1
     
     # Plot filter to plot bad cases?

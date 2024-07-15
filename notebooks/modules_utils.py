@@ -1,7 +1,7 @@
 from modules_clustering import *
 import math
 from puntuacion import *
-import regex as re
+import re
 
 #### FUNCTIONS TO PROCESS JSON DATA ####
 
@@ -92,6 +92,9 @@ def extract_vano_values(data, vano):
     Returns:
     tuple: Four lists containing the x, y, and z coordinate arrays for conductors, supports, vertices, and support endpoints.
     """
+    
+    vano_length = data[vano]["LONGITUD_2D"]
+    idv = data[vano]["ID_VANO"]
 
     puntos_conductores = data[vano]['LIDAR']['CONDUCTORES']
     puntos_apoyos = data[vano]['LIDAR']['APOYOS']
@@ -111,7 +114,7 @@ def extract_vano_values(data, vano):
     for element in data[vano]['CONDUCTORES']:
         vert_values.append(get_coord(element['VERTICES']))
 
-    return cond_values, apoyo_values, vert_values, extremos_values
+    return idv, vano_length, cond_values, apoyo_values, vert_values, extremos_values
 
 
 #### FUNCTIONS TO COMPUTE DISTANCES ####
