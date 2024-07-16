@@ -1,7 +1,8 @@
 
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-
+from electra_package.modules_preprocess import *
+from electra_package.modules_main import *
 
 #### FUNCTIONS TO PLOT DATA AND FITS ####
 
@@ -131,7 +132,7 @@ def plot_fit_2(title,cond_values, apoyo_values, vert_values,fit):
     # Muestra el gráfico
     fig.show()
 
-def plot_data(title,cond_values, apoyo_values, vert_values, extremos_values):
+def plot_data(title,cond_values, apoyo_values, vert_values=None, extremos_values=None):
     """
     Create and display a 3D scatter plot with conductors, supports, vertices, and endpoints.
 
@@ -158,14 +159,18 @@ def plot_data(title,cond_values, apoyo_values, vert_values, extremos_values):
 
     # Agrega el gráfico para los apoyos
     add_plot(fig, apoyo_values, "orange", 2.5, "Apoyos", "markers")
+    
+    if extremos_values != None:
 
-    # Agrega el gráfico para los extremos
-    add_plot(fig, extremos_values, "black", 5, "Extremos", "markers")
+        # Agrega el gráfico para los extremos
+        add_plot(fig, extremos_values, "black", 5, "Extremos", "markers")
 
-    for vert in vert_values:
+    if vert_values != None:
+            
+        for vert in vert_values:
 
-        # Agrega el gráfico para los vertices
-        add_plot(fig, vert , "red", 5, "Vertices", "lines")
+            # Agrega el gráfico para los vertices
+            add_plot(fig, vert , "red", 5, "Vertices", "lines")
 
     # Agrega títulos a los ejes
     fig.update_layout(
@@ -249,53 +254,53 @@ def plot_net(data,labels,k=10):
     plt.grid(True)
     plt.show()
 
-def plot_full_net(data,labels):
-    """
-    Plot the full network of spans based on clustering labels.
+# def plot_full_net(data,labels):
+#     """
+#     Plot the full network of spans based on clustering labels.
 
-    This function processes each cluster in the provided data, extracts relevant values for each span,
-    fits catenary parameters, and generates plots for each cluster. It also provides summary statistics
-    about the spans, including counts of spans with single supports, incomplete spans, and spans analyzed.
-    Finally, it plots the distribution of parameters for all lines in the network.
+#     This function processes each cluster in the provided data, extracts relevant values for each span,
+#     fits catenary parameters, and generates plots for each cluster. It also provides summary statistics
+#     about the spans, including counts of spans with single supports, incomplete spans, and spans analyzed.
+#     Finally, it plots the distribution of parameters for all lines in the network.
 
-    Parameters:
-    data (list of dicts): The data containing information about different spans.
-    labels (numpy.ndarray): The cluster labels assigned to each span.
-    """
+#     Parameters:
+#     data (list of dicts): The data containing information about different spans.
+#     labels (numpy.ndarray): The cluster labels assigned to each span.
+#     """
 
-    ids_single_backing,X=data_middlepoints(data)
+#     ids_single_backing,X=data_middlepoints(data)
 
-    fulldata_plot=[]
-    for lbl in np.unique(labels):
+#     fulldata_plot=[]
+#     for lbl in np.unique(labels):
 
-        idval_subg=X.loc[labels==lbl,'ids'].to_list()
+#         idval_subg=X.loc[labels==lbl,'ids'].to_list()
 
-        parameters,incomplete_vanos=fit_vano_group(data,sublist=idval_subg)
+#         parameters,incomplete_vanos=fit_vano_group(data,sublist=idval_subg)
 
-        dfd=pretreatment_linegroup(parameters)
+#         dfd=pretreatment_linegroup(parameters)
 
-        print(f'\nVanos con un sólo apoyo: {len(ids_single_backing)}')
-        print(f'Vanos incompletos: {len(incomplete_vanos)}')
-        print(f'Incompletos con apoyos: {len([el for el in incomplete_vanos if el not in ids_single_backing])}')
-        print(f'Sin apoyos y completos: {len([el for el in ids_single_backing if el not in incomplete_vanos])}')
-        print(f'Vanos analizados:{dfd.shape[0]}')
-        print(f'Vanos perdidos:{len(parameters)-dfd.shape[0]}\n')
+#         print(f'\nVanos con un sólo apoyo: {len(ids_single_backing)}')
+#         print(f'Vanos incompletos: {len(incomplete_vanos)}')
+#         print(f'Incompletos con apoyos: {len([el for el in incomplete_vanos if el not in ids_single_backing])}')
+#         print(f'Sin apoyos y completos: {len([el for el in ids_single_backing if el not in incomplete_vanos])}')
+#         print(f'Vanos analizados:{dfd.shape[0]}')
+#         print(f'Vanos perdidos:{len(parameters)-dfd.shape[0]}\n')
 
-        plot_linegroup_parameters(dfd,str(lbl))
-        total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
-        fulldata_plot.append(total)
+#         plot_linegroup_parameters(dfd,str(lbl))
+#         total=pd.concat([dfd['A1'],dfd['B1'],dfd['C1']],axis=0)
+#         fulldata_plot.append(total)
 
-    mins=[]
-    maxs=[]
-    for ils,lbl in enumerate(np.unique(labels)):
-        plt.hist(fulldata_plot[ils],label=lbl,alpha=0.5,density=True)
-        mins.append(fulldata_plot[ils].min())
-        maxs.append(fulldata_plot[ils].max())
+#     mins=[]
+#     maxs=[]
+#     for ils,lbl in enumerate(np.unique(labels)):
+#         plt.hist(fulldata_plot[ils],label=lbl,alpha=0.5,density=True)
+#         mins.append(fulldata_plot[ils].min())
+#         maxs.append(fulldata_plot[ils].max())
 
-    plt.xlim(min(mins)-0.2,max(maxs)+0.2)
-    plt.legend()
-    plt.title('All Lines Distribution')
-    plt.show()
+#     plt.xlim(min(mins)-0.2,max(maxs)+0.2)
+#     plt.legend()
+#     plt.title('All Lines Distribution')
+#     plt.show()
 
 def plot_linegroup_parameters(dfd,lbl):
     """

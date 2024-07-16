@@ -1,6 +1,6 @@
 
 from loguru import logger
-
+from statistics import mode
 from electra_package.modules_utils import *
 from electra_package.modules_clustering import *
 from electra_package.modules_preprocess import *
@@ -29,7 +29,7 @@ def analyze_backings(vano_length, idv, cond_values, apoyo_values, vert_values, e
         # Include flag of bad extreme values
         # Set the line value of this element as 0 ****
         logger.warning("UN APOYO LIDAR")
-        plot_data(f"{idv}",cond_values, apoyo_values, vert_values, extremos_values)
+        # plot_data(f"{idv}",cond_values, apoyo_values, vert_values, extremos_values)
         
         if dataf != None:
             

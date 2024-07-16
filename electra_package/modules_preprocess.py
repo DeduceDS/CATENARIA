@@ -631,12 +631,12 @@ def define_backings(vano_length, apoyo_values):
             logger.debug(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
             logger.debug("SOLO HAY 1 APOYO")
             
-            plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
-            plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
-            plt.title('Custom 1D K-means Clustering')
-            plt.xlabel('X Coordinate')
-            plt.ylabel('Y Coordinate')
-            plt.show()
+            # plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
+            # plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
+            # plt.title('Custom 1D K-means Clustering')
+            # plt.xlabel('X Coordinate')
+            # plt.ylabel('Y Coordinate')
+            # plt.show()
             
             return -1
 
@@ -648,4 +648,4 @@ def define_backings(vano_length, apoyo_values):
     
     extremos_values = [x_vals, y_vals, z_vals]
         
-    return extremos_values
+    return list(extremos_values)
