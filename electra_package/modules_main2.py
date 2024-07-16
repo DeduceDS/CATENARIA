@@ -1,14 +1,12 @@
-import json
-from modules_utils import *
-from modules_clustering import *
-from modules_preprocess import *
-from modules_plots import *
-from modules_fits import *
-from sklearn.preprocessing import StandardScaler
-from scipy.optimize import curve_fit
-import time
+
 from loguru import logger
-import sys
+
+from electra_package.modules_utils import *
+from electra_package.modules_clustering import *
+from electra_package.modules_preprocess import *
+from electra_package.modules_plots import *
+from electra_package.modules_fits import *
+import time
 
 def analyze_backings(vano_length, idv, cond_values, apoyo_values, vert_values, extremos_values, dataf=None):
     

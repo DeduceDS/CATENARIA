@@ -1,13 +1,13 @@
-import json
-from modules_utils import *
-from modules_clustering import *
-from modules_preprocess import *
-from modules_plots import *
-from modules_fits import *
-import time
 from loguru import logger
+import json
+import time
 import sys
 
+from electra_package.modules_utils import *
+from electra_package.modules_clustering import *
+from electra_package.modules_preprocess import *
+from electra_package.modules_plots import *
+from electra_package.modules_fits import *
 
 def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=False,label=''):
     """
