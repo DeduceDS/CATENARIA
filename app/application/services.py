@@ -6,7 +6,7 @@ from app.application.interfaces import (
 )
 from app.domain.models import ElectraData
 from typing import Dict
-from catenaria.deliverable.modules_fit import fit_plot_vano_group_2
+from electra_package.modules_main import fit_plot_vano_group_2
 
 
 class ElectraDataServiceImpl(ElectraDataService):
@@ -26,7 +26,6 @@ class ElectraPredictServiceImpl(ElectraPredictService):
         import numpy as np
 
         # import json
-
         def json_serializable(obj):
             if isinstance(obj, np.ndarray):
                 return obj.tolist()
@@ -41,6 +40,9 @@ class ElectraPredictServiceImpl(ElectraPredictService):
             else:
                 return obj
 
-        result = json_serializable(fit_plot_vano_group_2(data))
+        # getting required out_data destructuring the returned tuple (data, rmses, maxes, correlations)
+        out_data, *others = fit_plot_vano_group_2(data)
+
+        result = json_serializable(out_data)
 
         return result
