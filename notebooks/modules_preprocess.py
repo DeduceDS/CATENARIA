@@ -403,8 +403,8 @@ def clean_outliers_3(cropped_conds):
     3. Selects the inlier points and returns them.
     """
     
-    nn = 10 # Local search
-    std_multip = 1 # Not very sensitive
+    nn = 4 # Local search
+    std_multip = 2 # Not very sensitive
 
     pcd_o3d = o3d.geometry.PointCloud()
     pcd_o3d.points = o3d.utility.Vector3dVector(np.array(cropped_conds).T)
@@ -575,10 +575,15 @@ def define_backings(vano_length, apoyo_values):
 
         mean_x = np.mean(apoyo[1,:])
         mean_y = np.mean(apoyo[0,:])
-        mean_z = np.mean(apoyo[2,:])
+        max_z = np.max(apoyo[2,:])
+        min_z = np.min(apoyo[2,:])
         
-        c_mass = np.array([mean_x, mean_y, mean_z])
-        extremos.append(c_mass)
+        c_mass1 = np.array([mean_x, mean_y, min_z])
+        c_mass2 = np.array([mean_x, mean_y, max_z])
+        
+        extremos.append(c_mass1)
+        extremos.append(c_mass2)
+        
         apoyos.append(apoyo)
 
     dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
@@ -601,16 +606,21 @@ def define_backings(vano_length, apoyo_values):
 
             mean_x = np.mean(apoyo[0,:])
             mean_y = np.mean(apoyo[1,:])
-            mean_z = np.mean(apoyo[2,:])
+            max_z = np.max(apoyo[2,:])
+            min_z = np.min(apoyo[2,:])
             
-            c_mass = np.array([mean_x, mean_y, mean_z])
-            extremos.append(c_mass)
+            c_mass1 = np.array([mean_x, mean_y, min_z])
+            c_mass2 = np.array([mean_x, mean_y, max_z])
+            
+            extremos.append(c_mass1)
+            extremos.append(c_mass2)
+            
             apoyos.append(apoyo)
         
 
         logger.debug(f"Invertir coordenadas")
         
-        dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
+        dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
         extremos = np.array(extremos)
         
         if 100*abs(dist - vano_length)/vano_length > 10.0:
@@ -627,12 +637,11 @@ def define_backings(vano_length, apoyo_values):
             
             return -1
 
-    z_vals = [np.array(extremos)[0,2], np.array(extremos)[1,2], np.array(extremos)[0,2], np.array(extremos)[0,2]]
-    y_vals =  np.stack([np.array(extremos)[0,1], np.array(extremos)[0,1], np.array(extremos)[1,1], np.array(extremos)[1,1],
-                        np.array(extremos)[0,1], np.array(extremos)[0,1], np.array(extremos)[1,1], np.array(extremos)[1,1]])
-    
-    x_vals =  np.stack([np.array(extremos)[0,0], np.array(extremos)[0,0], np.array(extremos)[1,0], np.array(extremos)[1,0],
-                        np.array(extremos)[0,0], np.array(extremos)[0,0], np.array(extremos)[1,0], np.array(extremos)[1,0]])
+    print(extremos.shape)
+    # z_vals = np.stack([np.array(extremos)[0,2], np.array(extremos)[1,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
+    z_vals = np.stack([np.array(extremos)[2,2], np.array(extremos)[3,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
+    y_vals =  np.stack([np.array(extremos)[2,1], np.array(extremos)[3,1], np.array(extremos)[0,1], np.array(extremos)[1,1]])
+    x_vals =  np.stack([np.array(extremos)[2,0], np.array(extremos)[3,0], np.array(extremos)[0,0], np.array(extremos)[1,0]])
     
     extremos_values = [x_vals, y_vals, z_vals]
         
