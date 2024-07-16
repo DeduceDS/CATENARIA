@@ -1,18 +1,15 @@
-import json
-import plotly.graph_objects as go
-import matplotlib.pyplot as plt
-import numpy as np
-import os
-import pandas as pd
-from sklearn.cluster import SpectralClustering
 
+import numpy as np
+import pandas as pd
+
+from sklearn.cluster import SpectralClustering
 from sklearn.decomposition import PCA
 from sklearn.metrics import mean_squared_error
 from sklearn.cluster import KMeans
 
-pathdata0 = os.getcwd()+"/../data/lineas_completas/VDI711.json"
-pathdata1 = os.getcwd()+"/../data/lineas_completas/REG804.json"
-pathdata2 = os.getcwd()+"/../data/lineas_completas/XIN803.json"
+# pathdata0 = "./data/lineas_completas/VDI711.json"
+# pathdata1 = "./data/lineas_completas/REG804.json"
+# pathdata2 = "./data/lineas_completas/XIN803.json"
 
 def get_coord(points):
     

@@ -1,16 +1,17 @@
 import numpy as np
-from scipy.stats import pearsonr, spearmanr
-import matplotlib.pyplot as plt
+from loguru import logger
 import numpy as np
 import time
+
+from scipy.stats import pearsonr, spearmanr
+from scipy.optimize import curve_fit
+
 from sklearn.metrics import root_mean_squared_error as rmse
 from sklearn.metrics import mean_absolute_error as ma
-from scipy.stats import pearsonr
 from sklearn.preprocessing import StandardScaler
-from scipy.optimize import curve_fit
 from sklearn.cluster import SpectralClustering
 from sklearn.decomposition import PCA
-from loguru import logger
+
 
 def catenaria(x, a, h, k):
     x = np.asarray(x).flatten()

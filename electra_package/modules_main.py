@@ -1,13 +1,14 @@
-import json
-from modules_utils import *
-from modules_clustering import *
-from modules_preprocess import *
-from modules_plots import *
-from modules_fits import *
-import time
 from loguru import logger
+import json
+import time
 import sys
+from statistics import mode
 
+from electra_package.modules_utils import *
+from electra_package.modules_clustering import *
+from electra_package.modules_preprocess import *
+from electra_package.modules_plots import *
+from electra_package.modules_fits import *
 
 def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=False,label=''):
     """
@@ -96,7 +97,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                 logger.critical(f"\nReference {idv}")
                 
                 # Extract vano values: LIDAR points, extremos, polilinia....
-                cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
+                idv, vano_length, cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
                 cond_values=np.vstack(cond_values)
                 apoyo_values=np.vstack(apoyo_values)
 
@@ -140,7 +141,7 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                     logger.warning(f"Redefining backings")
                     
                     # Redefine and compute new extreme values
-                    extremos_values = list(define_backings(vano_length,apoyo_values))
+                    extremos_values = define_backings(vano_length,apoyo_values)
                     
                     end_time1 = time.time()
                     
@@ -152,8 +153,11 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                         
                         # Include flag of bad extreme values
                         # Set the line value of this element as 0 ****
+                        
+                        # idv, vano_length, cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
+                        # plot_data(f"{idv}",cond_values, apoyo_values, vert_values, extremos_values)
+                        
                         logger.warning("UN APOYO LIDAR")
-                        plot_data(f"{idv}",cond_values, apoyo_values, vert_values, extremos_values)
                         dataf['flag'].append('bad_backing')
                         dataf['line_number'].append(0)
                         continue
@@ -174,9 +178,9 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                     
                     logger.success(f"Cropping conductor")
                     # Crop conductor LIDAR points and clean outliers before any transformation
-                    cropped_conds = clean_outliers(rotated_conds, rotated_extremos)
-                    cropped_conds = clean_outliers_2(cropped_conds) # More crop?
-                    cropped_conds = clean_outliers_3(cropped_conds)
+                    # cropped_conds = clean_outliers(rotated_conds, rotated_extremos)
+                    cropped_conds = clean_outliers_2(rotated_conds) # More crop?
+                    # cropped_conds = clean_outliers_3(cropped_conds)
 
                     # outliers = pcd_o3d.select_by_index(filtered_points[1], invert=True)
                     
