@@ -8,7 +8,7 @@ from app.tasks.celery_app import celery_app
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
+    # await init_db()
     yield
 
 
