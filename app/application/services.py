@@ -7,6 +7,7 @@ from app.application.interfaces import (
 from app.domain.models import ElectraData
 from typing import Dict
 from electra_package.modules_main import fit_plot_vano_group_2
+import numpy as np
 
 
 class ElectraDataServiceImpl(ElectraDataService):
@@ -23,7 +24,6 @@ class ElectraPredictServiceImpl(ElectraPredictService):
         pass
 
     async def predict_data_from_json(self, data: Dict) -> Dict:
-        import numpy as np
 
         # import json
         def json_serializable(obj):

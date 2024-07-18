@@ -6,6 +6,8 @@ from app.application.services import ElectraDataServiceImpl, ElectraPredictServi
 from app.infrastructure.repositories import VanoRepositoryImpl
 from app.infrastructure.database import get_db
 from app.domain.models import ElectraData, Vano
+from app.tasks.celery_app import process_electra_data
+
 import json
 import tempfile
 import os
@@ -72,3 +74,57 @@ async def get_vanos(db: AsyncSession = Depends(get_db)):
     vano_repository = VanoRepositoryImpl(db)
     vanos = await vano_repository.get_all()
     return vanos
+
+
+# Queue endpoints
+
+
+@router.post("/queue_predict_json")
+async def queue_predict_json(file: UploadFile = File(...)):
+    content = await file.read()
+    data = json.loads(content)
+
+    # Queue the task
+    task = process_electra_data.delay(data)
+
+    return {"message": "Task queued successfully", "task_id": task.id}
+
+
+@router.get("/task_status/{task_id}")
+async def get_task_status(task_id: str):
+    task = process_electra_data.AsyncResult(task_id)
+
+    if task.state == "PENDING":
+        response = {"state": task.state, "status": "Task is waiting for execution"}
+    elif task.state == "STARTED":
+        response = {"state": task.state, "status": "Task has been started"}
+    elif task.state == "PROGRESS":
+        response = {
+            "state": task.state,
+            "status": task.info.get("status", ""),
+            "progress": task.info.get("progress", 0),
+        }
+    elif task.state == "SUCCESS":
+        response = {
+            "state": task.state,
+            "status": "Task has been completed",
+            "result": task.result,
+        }
+    else:
+        response = {
+            "state": task.state,
+            "status": str(task.info),  # this is the exception raised
+        }
+    return response
+
+
+@router.get("/task_result/{task_id}")
+async def get_task_result(task_id: str):
+    task = process_electra_data.AsyncResult(task_id)
+
+    if task.state == "SUCCESS":
+        return {"result": task.result}
+    elif task.state == "FAILURE":
+        raise HTTPException(status_code=400, detail="Task failed")
+    else:
+        raise HTTPException(status_code=404, detail="Task not completed yet")
