@@ -2,7 +2,8 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.presentation.api import router
-from app.infrastructure.database import init_db
+
+# from app.infrastructure.database import init_db
 from app.tasks.celery_app import celery_app
 
 

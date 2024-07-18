@@ -7,7 +7,7 @@ services:
       dockerfile: docker/Dockerfile
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
-      - "8000:8000"
+      - "8111:8000"
     environment:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
@@ -36,8 +36,8 @@ services:
     command: keydb-server --appendonly yes --appendfsync everysec --save 900 1 --save 300 10 --save 60 10000 --maxmemory 256mb --maxmemory-policy allkeys-lru --protected-mode no
     volumes:
       - keydb_data:/data
-    ports:
-      - "6379:6379"
+    # ports:
+    #   - "6379:6379"
 
   redis-commander:
     # https://hub.docker.com/r/rediscommander/redis-commander
@@ -48,7 +48,7 @@ services:
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:
-      - "8081:8081"
+      - "8181:8081"
 
   celery_worker:
     image: albertodeduce/electra-ia

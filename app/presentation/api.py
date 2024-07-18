@@ -1,12 +1,14 @@
 # app/presentation/api.py
 from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.application.services import ElectraDataServiceImpl, ElectraPredictServiceImpl
-from app.infrastructure.repositories import VanoRepositoryImpl
-from app.infrastructure.database import get_db
+from app.application.services import ElectraPredictServiceImpl
 from app.domain.models import ElectraData, Vano
 from app.tasks.celery_app import process_electra_data
+
+# from app.infrastructure.database import get_db
+# from app.infrastructure.repositories import VanoRepositoryImpl
+# from app.application.services import ElectraDataServiceImpl
+# from sqlalchemy.ext.asyncio import AsyncSession
 
 import json
 import tempfile
