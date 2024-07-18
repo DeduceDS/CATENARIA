@@ -1,6 +1,7 @@
 services:
   api:
     image: albertodeduce/electra-ia
+    restart: unless-stopped
     build:
       context: .
       dockerfile: docker/Dockerfile
@@ -31,6 +32,10 @@ services:
 
   redis:
     image: eqalpha/keydb:latest
+    restart: unless-stopped
+    command: keydb-server --appendonly yes --appendfsync everysec --save 900 1 --save 300 10 --save 60 10000 --maxmemory 256mb --maxmemory-policy allkeys-lru --protected-mode no
+    volumes:
+      - keydb_data:/data
     ports:
       - "6379:6379"
 
@@ -47,10 +52,11 @@ services:
 
   celery_worker:
     image: albertodeduce/electra-ia
+    restart: unless-stopped
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: celery -A app.tasks.celery_app worker --loglevel=info
+    command: celery -A app.tasks.celery_app worker --loglevel=info --queues=predict_vanos_queue
     environment:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
@@ -67,10 +73,13 @@ services:
 
   flower:
     image: albertodeduce/electra-ia
+    restart: unless-stopped
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: celery -A app.tasks.celery_app flower --port=5555
+    command: celery -A app.tasks.celery_app flower --persistent --db=/flower/flower --port=5555
+    volumes:
+      - flower_data:/flower
     ports:
       - "5555:5555"
     environment:
@@ -82,9 +91,12 @@ services:
       - DB_SCHEMA=${DB_SCHEMA}
       - KEYDB_HOST=${KEYDB_HOST}
       - KEYDB_PORT=${KEYDB_PORT}
+      - FLOWER_UNAUTHENTICATED_API=true
     depends_on:
       - celery_worker
       - redis
 
-# volumes:
-#   postgres_data:
+volumes:
+  # postgres_data:
+  keydb_data:
+  flower_data:
