@@ -37,9 +37,12 @@ COPY --from=builder ${VIRTUAL_ENV} ${VIRTUAL_ENV}
 COPY app ./app
 COPY electra_package electra_package
 
+# Create flower persistence folder
+RUN mkdir /flower
 
 # Change ownership of the app directory to the non-root user
 RUN chown -R electra-user:electra-user /app
+RUN chown -R electra-user:electra-user /flower
 
 # Switch to non-root user
 USER electra-user
