@@ -5,7 +5,7 @@ import re
 
 from electra_package.puntuacion import *
 from electra_package.modules_clustering import *
-
+from loguru import logger
 #### FUNCTIONS TO PROCESS JSON DATA ####
 
 def print_element(element):
@@ -84,7 +84,7 @@ def get_coord2(extremos_apoyos):
 
     return np.stack(x_vals), np.stack(y_vals), np.stack(z_vals)
 
-def extract_vano_values(data, vano):
+def extract_vano_values(vano):
     """
     Extract coordinate values for conductors, supports, and their endpoints from a data dictionary.
 
@@ -96,12 +96,13 @@ def extract_vano_values(data, vano):
     tuple: Four lists containing the x, y, and z coordinate arrays for conductors, supports, vertices, and support endpoints.
     """
     
-    vano_length = data[vano]["LONGITUD_2D"]
-    idv = data[vano]["ID_VANO"]
+    logger.info("Extracting vano info...")
+    vano_length = vano["LONGITUD_2D"]
+    idv = vano["ID_VANO"]
 
-    puntos_conductores = data[vano]['LIDAR']['CONDUCTORES']
-    puntos_apoyos = data[vano]['LIDAR']['APOYOS']
-    extremos_apoyos = data[vano]['APOYOS']
+    puntos_conductores = vano['LIDAR']['CONDUCTORES']
+    puntos_apoyos = vano['LIDAR']['APOYOS']
+    extremos_apoyos = vano['APOYOS']
 
     # Extrae las coordenadas x, y, z de los conductores
     x_vals_conductores, y_vals_conductores, z_vals_conductores = get_coord(puntos_conductores)
@@ -114,10 +115,10 @@ def extract_vano_values(data, vano):
 
     vert_values = []
 
-    for element in data[vano]['CONDUCTORES']:
+    for element in vano['CONDUCTORES']:
         vert_values.append(get_coord(element['VERTICES']))
-
-    return idv, vano_length, cond_values, apoyo_values, vert_values, extremos_values
+    
+    return idv, vano_length, np.array(cond_values), np.array(apoyo_values), vert_values, extremos_values
 
 
 #### FUNCTIONS TO COMPUTE DISTANCES ####

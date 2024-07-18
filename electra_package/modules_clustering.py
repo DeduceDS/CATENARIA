@@ -10,7 +10,7 @@ from sklearn.cluster import DBSCAN
 
 def initialize_centroids(points, n_clusters):
     """
-    Initialize centroids for clustering based on the minimum, maximum, and optionally mean of the x-coordinates.
+    Initialize centroids for clustering based on the minimum, maximum1, and optionally mean of the x-coordinates.
 
     Parameters:
     points (numpy.ndarray): The x, y, and z coordinates of the points.

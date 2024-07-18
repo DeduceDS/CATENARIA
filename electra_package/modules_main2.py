@@ -7,20 +7,39 @@ from electra_package.modules_preprocess import *
 from electra_package.modules_plots import *
 from electra_package.modules_fits import *
 import time
+import sys
 
-def analyze_backings(vano_length, idv, cond_values, apoyo_values, vert_values, extremos_values, dataf=None):
+
+def set_logger(level):
+    
+    logger.remove() # remove the default logger
+    # Adding new levels: Critical = Text with Purple Background, Title: Light 
+    logger.level("CRITICAL", color = "<bold><bg #AF5FD7>")
+    try:
+        logger.level("TITLE")
+    except ValueError:
+        logger.level("TITLE", color="<bold><fg 86>", no=21)
+    logger.add(sys.stdout, format = "<lvl>{message}</lvl>", colorize=True, backtrace=True, diagnose=True, level=level)  
+
+
+def analyze_backings(vano_length, apoyo_values, extremos_values, dataf=None):
     
     # Start the timer
     start_time1 = time.time()
 
-    logger.warning(f"Redefining backings")
+    logger.info(f"Analyzing backings")
+    
+    if len(extremos_values) != 4:
+        logger.warning(f"Only 2 backings")
+    
+    apoyo_values = np.array(clean_outliers_2(apoyo_values))
     
     # Redefine and compute new extreme values
-    extremos_values = list(define_backings(vano_length,apoyo_values))
+    extremos_values = define_backings(vano_length,apoyo_values)
     
     end_time1 = time.time()
     
-    logger.debug(f"Second time {end_time1-start_time1}")
+    logger.trace(f"Second time {end_time1-start_time1}")
     
     # Check for missing LIDAR apoyo points
     # Exception to handle = bad data , correction not possible
@@ -36,13 +55,13 @@ def analyze_backings(vano_length, idv, cond_values, apoyo_values, vert_values, e
             dataf['flag'].append('bad_backing')
             dataf['line_number'].append(0)
         
-        return -1
+        return dataf, -1
     
     # Plot filter to plot bad cases?
     # if any([plot_filter=='all',plot_filter=='bad_backing']):
         # plot_vano(f'{idv} Bad_Backing',X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
         
-    return dataf, extremos_values
+    return dataf, list(extremos_values)
 
 def preprocess_conductors(cond_values, extremos_values, apoyo_values, vert_values):
             
@@ -71,9 +90,9 @@ def preprocess_conductors(cond_values, extremos_values, apoyo_values, vert_value
         
     logger.debug(f"Third time {end_time2-start_time2}")
     
-    return X_scaled, cropped_conds
+    return X_scaled, cropped_conds, rotated_extremos, rotated_vertices, scaler_y
 
-def extract_conductor_config(dataf, X_scaled, scaler_y, rotated_conds, rotated_extremos, cropped_conds):
+def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos, cropped_conds, dataf=None):
     
     start_time2 = time.time()
     
@@ -130,8 +149,9 @@ def extract_conductor_config(dataf, X_scaled, scaler_y, rotated_conds, rotated_e
     # Obtain the mode of n_clusters along the list of size 10 == number of conductors
     md=mode(ncl)
     
-    # Save the final number of conductors detected (number of lines)
-    dataf['line_number'].append(md)
+    if dataf is not None:
+        # Save the final number of conductors detected (number of lines)
+        dataf['line_number'].append(md)
     logger.info(f'Number of lines: {md}')
     
     # Do the same for the x vs z variance relation
@@ -152,7 +172,7 @@ def extract_conductor_config(dataf, X_scaled, scaler_y, rotated_conds, rotated_e
     
     logger.debug(f"Third time {end_time2-start_time2}")
 
-    return dataf, finc
+    return dataf, finc, md
 
 
 def preprocess_prefit(cond_values):
@@ -221,13 +241,11 @@ def preprocess_prefit(cond_values):
     
     logger.debug(f"Fifth time {end_time4-end_time3}")
                         
-    return x_filt_cond1, y_filt_cond1, z_filt_cond1, x_filt_cond2, y_filt_cond2, z_filt_cond2, x_filt_cond3, y_filt_cond3, z_filt_cond3
+    return x_filt_cond1, y_filt_cond1, z_filt_cond1, x_filt_cond2, y_filt_cond2, z_filt_cond2, x_filt_cond3, y_filt_cond3, z_filt_cond3, clusters
 
-def fit_reconstruct_evaluate_conductors(y_filt_cond1, z_filt_cond1, 
+def fit_reconstruct_conductors(y_filt_cond1, z_filt_cond1, 
                                         y_filt_cond2, z_filt_cond2, 
-                                        y_filt_cond3, z_filt_cond3,
-                                        rmses, maxes, correlations, evaluaciones, idv,
-                                        rotated_vertices, vano_length, clusters):
+                                        y_filt_cond3, z_filt_cond3):
     
     end_time4 = time.time()
     
@@ -250,22 +268,46 @@ def fit_reconstruct_evaluate_conductors(y_filt_cond1, z_filt_cond1,
     end_time5 = time.time()
     
     logger.debug(f"Sixth time {end_time5-end_time4}")
+    
+    return x_pol1, y_pol1, parametros1, metrics1, x_pol2, y_pol2, parametros2, metrics2, x_pol3, y_pol3, parametros3, metrics3
+
+def evaluate_conductors(x_pol1, x_pol2, x_pol3, y_pol1, y_pol2, y_pol3,
+                                        parametros1, parametros2, parametros3, rotated_vertices, vano_length, clusters):
 
     ########################## TONI
     
-    rmses.append([metrics1[0], metrics2[0], metrics3[0]])
-    maxes.append([metrics1[1], metrics2[1], metrics3[1]])
-    correlations.append([[metrics1[2], metrics2[2], metrics3[2]], [metrics1[3], metrics2[3], metrics3[3]]])
+    end_time5 = time.time()
     
     logger.success(f"Evaluating fit")
     
     resultados_eval = evaluar_ajuste([x_pol1, x_pol2, x_pol3], [y_pol1, y_pol2, y_pol3], rotated_vertices, vano_length, clusters)
-    evaluaciones[idv] = resultados_eval
     
     end_time6 = time.time()
     
     logger.debug(f"Seventh time {end_time6-end_time5}")
     
-    return evaluaciones,  x_pol1, y_pol1, parametros1, x_pol2, y_pol2, parametros2,  x_pol3, y_pol3, parametros3,
+    return resultados_eval, x_pol1, y_pol1, parametros1, x_pol2, y_pol2, parametros2,  x_pol3, y_pol3, parametros3
     
 
+# def process_vano(vano_length, idv, cond_values, apoyo_values, vert_values, extremos_values, dataf=None):
+    
+#     _, extremos_values = analyze_backings(vano_length, idv, cond_values, apoyo_values, vert_values, extremos_values, dataf=None)
+    
+#     X_scaled, cropped_conds, rotated_extremos, rotated_vertices, scaler_y = preprocess_conductors(cond_values, extremos_values, apoyo_values, vert_values)
+    
+#     dataf, finc = extract_conductor_config(X_scaled, scaler_y, cropped_conds, rotated_extremos, cropped_conds, dataf=None)
+    
+#     x_filt_cond1, y_filt_cond1, z_filt_cond1, x_filt_cond2, y_filt_cond2, z_filt_cond2, x_filt_cond3, y_filt_cond3, z_filt_cond3, clusters = preprocess_prefit(cropped_conds)
+    
+#     x_pol1, y_pol1, parametros1, metrics1, x_pol2, y_pol2, parametros2, metrics2, x_pol3, y_pol3, parametros3, metrics3 = fit_reconstruct_conductors(y_filt_cond1, z_filt_cond1, 
+#                                                                                                                                                         y_filt_cond2, z_filt_cond2, 
+#                                                                                                                                                         y_filt_cond3, z_filt_cond3)
+
+#     resultados_eval, x_pol1, y_pol1, parametros1, x_pol2, y_pol2, parametros2,  x_pol3, y_pol3, parametros3 = evaluate_conductors(x_pol1, x_pol2, x_pol3, y_pol1, y_pol2, y_pol3,
+#                                                                                                                                     parametros1, parametros2, parametros3, rotated_vertices, vano_length, clusters)
+    
+#     rmses = [metrics1[0], metrics2[0], metrics3[0]]
+#     maxes = [metrics1[1], metrics2[1], metrics3[1]]
+#     correlations = [metrics1[2], metrics2[2], metrics3[2]], [metrics1[3], metrics2[3], metrics3[3]]
+    
+#     return resultados_eval, rmses, maxes, correlations, , , , 

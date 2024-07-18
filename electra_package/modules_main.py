@@ -518,7 +518,8 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                 puntuacion_dict['Output']=dataf['flag'][-1]
                 del puntuacion_dict['Vano']
                 data[i]['PUNTUACIONES']=puntuacion_dict
-                # print(puntuacion_dict)
+                
+                del data[i]["LIDAR"]
                 
                 end_time7 = time.time()
                 logger.debug(f"Eigth time {end_time7-end_time6}")

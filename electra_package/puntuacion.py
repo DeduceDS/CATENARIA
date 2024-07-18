@@ -1,7 +1,7 @@
 
 import numpy as np
 import pandas as pd
-
+from loguru import logger
 from sklearn.cluster import SpectralClustering
 from sklearn.decomposition import PCA
 from sklearn.metrics import mean_squared_error
@@ -94,13 +94,14 @@ def rmse(x, y):
     """
     RMSE entre las polilíneas y los puntos LIDAR
     """
-    if len(x) >= len(y):
-        intervalo = len(x) // (len(y)-1)
-        nn = [x[i * intervalo] for i in range(len(y)-1)] + [x[-1]]
+    
+    if x.shape[0] >= y.shape[0]:
+        intervalo = x.shape[0] // (y.shape[0]-1)
+        nn = [x[i * intervalo] for i in range(y.shape[0]-1)] + [x[-1]]
         return np.sqrt(mean_squared_error(nn, y))
     else:
-        intervalo = len(y) // (len(x)-1)
-        nn = [y[i * intervalo] for i in range(len(x)-1)] + [y[-1]]
+        intervalo = y.shape[0] // (x.shape[0]-1)
+        nn = [y[i * intervalo] for i in range(x.shape[0]-1)] + [y[-1]]
         return np.sqrt(mean_squared_error(nn, x))
     
 def num_apoyos_LIDAR(data, vano):
@@ -357,6 +358,7 @@ def ajuste(data, vano):
 
 def evaluar_ajuste(x_pols, y_pols, rotated_vertices, longitud_vano, clusters):
     
+    logger.info(f"{len(clusters), clusters}")
     y1, z1 = clusters[0][1,:], clusters[0][2,:]
     y2, z2 = clusters[1][1,:], clusters[1][2,:]
     y3, z3 = clusters[2][1,:], clusters[2][2,:]
@@ -697,7 +699,8 @@ def puntuación_por_vanos(data, id_vano):
 def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
     # with open(pathdata, 'r') as archivo:
     #     data = json.load(archivo)
-
+    
+    logger.success(f"Setting vano score with old puntuation function")    
     clasificacion1 = {
         'Vano': [],
         'Reconstrucción': [],
@@ -720,7 +723,7 @@ def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
     if len_apoyos == 2:
         if len_conductores >= 3:
             
-            resultados_evaluacion = evaluaciones[id_vano]
+            resultados_evaluacion = evaluaciones
             
             clasificacion1['Reconstrucción'].append("Posible")
             
@@ -768,7 +771,7 @@ def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
             clasificacion1['Error nuestro ajuste'].append(0)
     else:
         clasificacion1['Reconstrucción'].append("No posible")
-        apoyos_LIDAR = num_apoyos_LIDAR(data, num_iel)
+        apoyos_LIDAR = 2
         clasificacion1['Error polilínea'].append(0)
         clasificacion1['Error nuestro ajuste'].append(0)
         if apoyos_LIDAR == 2:

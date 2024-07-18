@@ -269,6 +269,7 @@ def rotate_vano(cond_values, extremos_values, apoyo_values, vert_values):
     tuple: Rotated coordinates for conductors, supports, vertices, and endpoints.
     """
     
+    logger.info(f"Rotating vano")
     # Rotate and compare
     mat, rotated_conds = rotate_points(cond_values, extremos_values)
 
@@ -303,6 +304,7 @@ def clean_outliers(rotated_conds, rotated_extremos):
     - The function assumes that the input arrays are properly rotated and aligned.
     """
     
+    logger.info(f"Cropping conductor with backings")
     # print(f"Shape 0: {np.array(rotated_extremos).shape}")
     
     #Get left and right extreme values
@@ -317,38 +319,38 @@ def clean_outliers(rotated_conds, rotated_extremos):
     
     # print(f"Shape 1: {cropped_conds.shape}")
 
-    # Paso 1: Calcular el histograma de las coordenadas Y
-    hist, bin_edges = np.histogram(cropped_conds[1, :], bins=200)
+    # # Paso 1: Calcular el histograma de las coordenadas Y
+    # hist, bin_edges = np.histogram(cropped_conds[1, :], bins=200)
 
-    # Paso 2: Identificar los picos significativos en ambos extremos del histograma
-    # Definir un umbral para considerar un pico significativo
-    threshold_density = np.mean(hist) + 2 * np.std(hist)
+    # # Paso 2: Identificar los picos significativos en ambos extremos del histograma
+    # # Definir un umbral para considerar un pico significativo
+    # threshold_density = np.mean(hist) + 2 * np.std(hist)
 
-    # Encontrar el bin con la mayor cantidad de puntos en la parte superior
-    peak_bin_upper = np.argmax(hist[:len(hist)//2])
-    # Encontrar el bin con la mayor cantidad de puntos en la parte inferior
-    peak_bin_lower = np.argmax(hist[len(hist)//2:]) + len(hist)//2
+    # # Encontrar el bin con la mayor cantidad de puntos en la parte superior
+    # peak_bin_upper = np.argmax(hist[:len(hist)//2])
+    # # Encontrar el bin con la mayor cantidad de puntos en la parte inferior
+    # peak_bin_lower = np.argmax(hist[len(hist)//2:]) + len(hist)//2
 
-    # Inicializar los umbrales
-    threshold_y_upper = None
-    threshold_y_lower = None
+    # # Inicializar los umbrales
+    # threshold_y_upper = None
+    # threshold_y_lower = None
     
-    # Verificar si hay una línea horizontal significativa en la parte superior
-    if hist[peak_bin_upper] > threshold_density:
-        threshold_y_upper = bin_edges[peak_bin_upper + 1]  # El +1 es para obtener el borde superior del bin
-        logger.debug(f"Umbral de corte superior detectado: {threshold_y_upper}")
+    # # Verificar si hay una línea horizontal significativa en la parte superior
+    # if hist[peak_bin_upper] > threshold_density:
+    #     threshold_y_upper = bin_edges[peak_bin_upper + 1]  # El +1 es para obtener el borde superior del bin
+    #     logger.debug(f"Umbral de corte superior detectado: {threshold_y_upper}")
 
-    # Verificar si hay una línea horizontal significativa en la parte inferior
-    if hist[peak_bin_lower] > threshold_density:
-        threshold_y_lower = bin_edges[peak_bin_lower]  # No se necesita ajustar más
-        logger.debug(f"Umbral de corte superior detectado: {threshold_y_lower}")
+    # # Verificar si hay una línea horizontal significativa en la parte inferior
+    # if hist[peak_bin_lower] > threshold_density:
+    #     threshold_y_lower = bin_edges[peak_bin_lower]  # No se necesita ajustar más
+    #     logger.debug(f"Umbral de corte superior detectado: {threshold_y_lower}")
 
-    # Paso 3: Filtrar los puntos usando los umbrales detectados
-    if threshold_y_upper is not None:
-        cropped_conds = cropped_conds[:, cropped_conds[1, :] > threshold_y_upper]
+    # # Paso 3: Filtrar los puntos usando los umbrales detectados
+    # if threshold_y_upper is not None:
+    #     cropped_conds = cropped_conds[:, cropped_conds[1, :] > threshold_y_upper]
 
-    if threshold_y_lower is not None:
-        cropped_conds = cropped_conds[:, cropped_conds[1, :] < threshold_y_lower]
+    # if threshold_y_lower is not None:
+    #     cropped_conds = cropped_conds[:, cropped_conds[1, :] < threshold_y_lower]
         
     # print(f"Shape 2: {cropped_conds.shape}")
     
@@ -378,6 +380,7 @@ def clean_outliers_2(rotated_conds):
     numpy.ndarray: The cleaned conductor points with outliers removed based on IQR.
     """
 
+    logger.info("Cleaning outliers with IQR")
     lx=pd.Series(rotated_conds[0,:]).quantile(0.25)
     ux=pd.Series(rotated_conds[0,:]).quantile(0.75)
     ly=pd.Series(rotated_conds[1,:]).quantile(0.25)
@@ -407,7 +410,7 @@ def clean_outliers_3(cropped_conds):
     """
     
     nn = 4 # Local search
-    std_multip = 2 # Not very sensitive
+    std_multip = 1.5 # Not very sensitive
 
     pcd_o3d = o3d.geometry.PointCloud()
     pcd_o3d.points = o3d.utility.Vector3dVector(np.array(cropped_conds).T)
@@ -451,7 +454,8 @@ def scale_conductor(X):
     Returns:
     numpy.ndarray: The scaled x, y, and z coordinates.
     """
-
+    
+    logger.info(f"Scaling conductor")
     # Normalizzazione dei valori di x e y
     scaler_y = StandardScaler()
     scaler_x = StandardScaler()
@@ -561,6 +565,8 @@ def define_backings(vano_length, apoyo_values):
         for each support. If the distance between centroids deviates significantly from the span length,
         returns -1.
     """
+    
+    logger.warning(f"Redefining backings")
                     
     invertedxy = np.zeros((np.array(apoyo_values).shape))
     invertedxy[1,:] = (np.array(apoyo_values))[0,:]
@@ -592,7 +598,7 @@ def define_backings(vano_length, apoyo_values):
     dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
     extremos = np.array(extremos)
 
-    logger.debug(f"Distance between mean points: {dist}")
+    logger.trace(f"Distance between mean points: {dist}")
 
     if 100*abs(dist - vano_length)/vano_length > 10.0: # data[i]["LONGITUD_2D"]
         
@@ -621,15 +627,15 @@ def define_backings(vano_length, apoyo_values):
             apoyos.append(apoyo)
         
 
-        logger.debug(f"Invertir coordenadas")
+        logger.trace(f"Invertir coordenadas")
         
         dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
         extremos = np.array(extremos)
         
         if 100*abs(dist - vano_length)/vano_length > 10.0:
 
-            logger.debug(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
-            logger.debug("SOLO HAY 1 APOYO")
+            logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
+            logger.warning("SOLO HAY 1 APOYO")
             
             # plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
             # plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
@@ -640,7 +646,7 @@ def define_backings(vano_length, apoyo_values):
             
             return -1
 
-    print(extremos.shape)
+
     # z_vals = np.stack([np.array(extremos)[0,2], np.array(extremos)[1,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
     z_vals = np.stack([np.array(extremos)[2,2], np.array(extremos)[3,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
     y_vals =  np.stack([np.array(extremos)[2,1], np.array(extremos)[3,1], np.array(extremos)[0,1], np.array(extremos)[1,1]])

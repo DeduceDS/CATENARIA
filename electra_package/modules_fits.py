@@ -31,8 +31,8 @@ def get_metrics(fitted_z_vals_scaled, z_vals_scaled):
     spearman_z, p_value = spearmanr(fitted_z_vals_scaled, z_vals_scaled) 
     # RMSE1_y = np.sqrt(np.mean((fitted_y_scaled1 - y_vals_scaled1)**2))
     
-    print(f"RmeanSE and RmaxSE error for z coordinate: {RMSE_z}, {max_z}")
-    print(f"Fit Pearson R and Fit Spearman R for z coordinate: {pearson_z}, {spearman_z}")
+    # print(f"RmeanSE and RmaxSE error for z coordinate: {RMSE_z}, {max_z}")
+    # print(f"Fit Pearson R and Fit Spearman R for z coordinate: {pearson_z}, {spearman_z}")
     # print(f"Fit error for y coordinate: {RMSE1_y}, {RMSE2_y}, {RMSE3_y}")
     
     return RMSE_z, max_z, pearson_z, spearman_z
