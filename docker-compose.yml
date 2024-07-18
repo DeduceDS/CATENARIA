@@ -56,7 +56,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: celery -A app.tasks.celery_app worker --loglevel=info --queues=predict_vanos_queue
+    command: celery -A app.tasks.celery_app worker --loglevel=info --pool=solo --queues=predict_vanos_queue
     environment:
       - DB_USER=${DB_USER}
       - DB_PASSWORD=${DB_PASSWORD}
