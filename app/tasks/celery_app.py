@@ -20,7 +20,11 @@ celery_app.conf.update(
 )
 
 
-@celery_app.task(bind=True, name="process_electra_data", track_started=True)
+@celery_app.task(
+    bind=True,
+    queue="predict_vanos_queue",
+    track_started=True,
+)
 def process_electra_data(self, data):
     self.update_state(state="STARTED", meta={"progress": 0})
     predict_service = ElectraPredictServiceImpl()
