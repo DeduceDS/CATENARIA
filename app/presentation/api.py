@@ -15,20 +15,27 @@ import os
 router = APIRouter()
 
 
-@router.post("/upload")
-async def upload_file(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
-    content = await file.read()
-    data = json.loads(content)
+# @router.post("/upload")
+# async def upload_file(file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+#     content = await file.read()
+#     data = json.loads(content)
 
-    # Convert the list of dictionaries to a list of Vano objects
-    vanos = [Vano(**vano_data) for vano_data in data]
-    electra_data = ElectraData(vanos=vanos)
+#     # Convert the list of dictionaries to a list of Vano objects
+#     vanos = [Vano(**vano_data) for vano_data in data]
+#     electra_data = ElectraData(vanos=vanos)
 
-    vano_repository = VanoRepositoryImpl(db)
-    electra_service = ElectraDataServiceImpl(vano_repository)
-    await electra_service.process_electra_data(electra_data)
+#     vano_repository = VanoRepositoryImpl(db)
+#     electra_service = ElectraDataServiceImpl(vano_repository)
+#     await electra_service.process_electra_data(electra_data)
 
-    return {"message": "File processed successfully"}
+#     return {"message": "File processed successfully"}
+
+
+# @router.get("/vanos")
+# async def get_vanos(db: AsyncSession = Depends(get_db)):
+#     vano_repository = VanoRepositoryImpl(db)
+#     vanos = await vano_repository.get_all()
+#     return vanos
 
 
 @router.post("/predict_json_download")
@@ -67,13 +74,6 @@ async def predict_json(file: UploadFile = File(...)):
     prediction = await predict_service.predict_data_from_json(data)
 
     return JSONResponse(prediction)
-
-
-@router.get("/vanos")
-async def get_vanos(db: AsyncSession = Depends(get_db)):
-    vano_repository = VanoRepositoryImpl(db)
-    vanos = await vano_repository.get_all()
-    return vanos
 
 
 # Queue endpoints
