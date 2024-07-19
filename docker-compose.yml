@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     ports:
       - "8111:8000"
     environment:
@@ -15,8 +15,8 @@ services:
       - DB_PORT=${DB_PORT}
       - DB_NAME=${DB_NAME}
       - DB_SCHEMA=${DB_SCHEMA}
-      - KEYDB_HOST=${KEYDB_HOST}
-      - KEYDB_PORT=${KEYDB_PORT}
+      - KEYDB_HOST=${KEYDB_HOST:-redis}
+      - KEYDB_PORT=${KEYDB_PORT:-6379}
     depends_on:
       - redis
       # - db
@@ -64,8 +64,8 @@ services:
       - DB_PORT=${DB_PORT}
       - DB_NAME=${DB_NAME}
       - DB_SCHEMA=${DB_SCHEMA}
-      - KEYDB_HOST=${KEYDB_HOST}
-      - KEYDB_PORT=${KEYDB_PORT}
+      - KEYDB_HOST=${KEYDB_HOST:-redis}
+      - KEYDB_PORT=${KEYDB_PORT:-6379}
     depends_on:
       - api
       - redis
@@ -89,8 +89,8 @@ services:
       - DB_PORT=${DB_PORT}
       - DB_NAME=${DB_NAME}
       - DB_SCHEMA=${DB_SCHEMA}
-      - KEYDB_HOST=${KEYDB_HOST}
-      - KEYDB_PORT=${KEYDB_PORT}
+      - KEYDB_HOST=${KEYDB_HOST:-redis}
+      - KEYDB_PORT=${KEYDB_PORT:-6379}
       - FLOWER_UNAUTHENTICATED_API=true
     depends_on:
       - celery_worker
