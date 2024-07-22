@@ -573,7 +573,7 @@ def define_backings(vano_length, apoyo_values):
     invertedxy[0,:] = (np.array(apoyo_values))[1,:]
     invertedxy[2,:] = (np.array(apoyo_values))[2,:]
     
-    labels, centroids = kmeans_clustering(invertedxy, 2, 100)
+    labels, centroids = kmeans_clustering(invertedxy, 2, 100, 0)
 
     apoyos = []
     extremos = []
@@ -604,7 +604,7 @@ def define_backings(vano_length, apoyo_values):
         
         points = np.array(apoyo_values)
         
-        labels, centroids = kmeans_clustering(points, 2, 100)
+        labels, centroids = kmeans_clustering(points, 2, 100, 0)
             
         apoyos = []
         extremos = []
@@ -637,12 +637,12 @@ def define_backings(vano_length, apoyo_values):
             logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
             logger.warning("SOLO HAY 1 APOYO")
             
-            # plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
-            # plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
-            # plt.title('Custom 1D K-means Clustering')
-            # plt.xlabel('X Coordinate')
-            # plt.ylabel('Y Coordinate')
-            # plt.show()
+            plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
+            plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
+            plt.title('Custom 1D K-means Clustering')
+            plt.xlabel('X Coordinate')
+            plt.ylabel('Y Coordinate')
+            plt.show()
             
             return -1
 

@@ -358,7 +358,7 @@ def ajuste(data, vano):
 
 def evaluar_ajuste(x_pols, y_pols, rotated_vertices, longitud_vano, clusters):
     
-    logger.info(f"{len(clusters), clusters}")
+    # logger.info(f"{len(clusters), clusters}")
     y1, z1 = clusters[0][1,:], clusters[0][2,:]
     y2, z2 = clusters[1][1,:], clusters[1][2,:]
     y3, z3 = clusters[2][1,:], clusters[2][2,:]

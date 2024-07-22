@@ -253,6 +253,36 @@ def plot_net(data,labels,k=10):
     plt.legend(handles, np.unique(labels), title="Labels")
     plt.grid(True)
     plt.show()
+    
+def plot_clusters(points, labels, centroids, coord):
+    """
+    Plot the clusters and centroids.
+
+    Parameters:
+    points (numpy.ndarray): The x, y, and z coordinates of the points.
+    labels (numpy.ndarray): The cluster labels for each point.
+    centroids (numpy.ndarray): The centroids.
+    coord (int): The coordinate axis used for clustering.
+    """
+    if coord == 0:
+        coord1, coord2 = 1, 2
+    elif coord == 1:
+        coord1, coord2 = 0, 2
+    else:
+        coord1, coord2 = 0, 1
+
+    plt.figure(figsize=(12,8))
+    plt.subplot(1,2,1)
+    plt.scatter(points[coord, :], points[coord1, :], c=labels, cmap='viridis', s=1)
+    plt.vlines(centroids, ymin=np.min(points[coord1, :]), ymax=np.max(points[coord1, :]), color='red', label='Centroids')
+    plt.subplot(1,2,2)
+    plt.scatter(points[coord, :], points[coord2, :], c=labels, cmap='viridis', s=1)
+    plt.vlines(centroids, ymin=np.min(points[coord2, :]), ymax=np.max(points[coord2, :]), color='red', label='Centroids')
+    plt.title(f'Clusters along {["X", "Y", "Z"][coord]}-axis vs {["X", "Y", "Z"][coord1]}-axis')
+    plt.xlabel(f'{["X", "Y", "Z"][coord]} Coordinate')
+    plt.ylabel(f'{["X", "Y", "Z"][coord1]} Coordinate')
+    plt.legend()
+    plt.show()
 
 # def plot_full_net(data,labels):
 #     """
