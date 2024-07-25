@@ -12,6 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from electra_package.puntuacion import *
 from electra_package.modules_utils import *
 from electra_package.modules_clustering import *
+from electra_package.modules_plots import *
 
 def get_bad_data(pathdata):
     
@@ -547,7 +548,7 @@ def data_middlepoints(data):
 
     return ids_bad_backing,X
 
-def define_backings(vano_length, apoyo_values):
+def define_backings(vano_length, apoyo_values, coord):
     """
     Define the backings (extremos) based on the length of the span and the coordinates of the supports.
 
@@ -567,23 +568,20 @@ def define_backings(vano_length, apoyo_values):
     """
     
     logger.warning(f"Redefining backings")
-                    
-    invertedxy = np.zeros((np.array(apoyo_values).shape))
-    invertedxy[1,:] = (np.array(apoyo_values))[0,:]
-    invertedxy[0,:] = (np.array(apoyo_values))[1,:]
-    invertedxy[2,:] = (np.array(apoyo_values))[2,:]
     
-    labels, centroids = kmeans_clustering(invertedxy, 2, 100, 0)
-
+    points = np.array(apoyo_values)
+    
+    labels, centroids = kmeans_clustering(points, 2, 100, coord)
+            
     apoyos = []
     extremos = []
-    
+
     for lab in np.unique(labels):
 
         apoyo = np.array(apoyo_values)[:, labels == lab]
 
-        mean_x = np.mean(apoyo[1,:])
-        mean_y = np.mean(apoyo[0,:])
+        mean_x = np.mean(apoyo[0,:])
+        mean_y = np.mean(apoyo[1,:])
         max_z = np.max(apoyo[2,:])
         min_z = np.min(apoyo[2,:])
         
@@ -595,17 +593,23 @@ def define_backings(vano_length, apoyo_values):
         
         apoyos.append(apoyo)
 
-    dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
+    
+    dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
     extremos = np.array(extremos)
-
-    logger.trace(f"Distance between mean points: {dist}")
-
-    if 100*abs(dist - vano_length)/vano_length > 10.0: # data[i]["LONGITUD_2D"]
+    
+    if 100*abs(dist - vano_length)/vano_length > 20.0:
+    
+        logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
+        logger.trace(f"Vano length, distance {vano_length, dist}")
+        logger.trace(f"Invertir coordenadas")
         
-        points = np.array(apoyo_values)
-        
-        labels, centroids = kmeans_clustering(points, 2, 100, 0)
+        if coord == 0:
+            coord = 1
+        else:
+            coord = 0
             
+        labels, centroids = kmeans_clustering(points, 2, 100, coord)
+                
         apoyos = []
         extremos = []
 
@@ -625,28 +629,37 @@ def define_backings(vano_length, apoyo_values):
             extremos.append(c_mass2)
             
             apoyos.append(apoyo)
-        
-
-        logger.trace(f"Invertir coordenadas")
-        
+            
         dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
         extremos = np.array(extremos)
-        
-        if 100*abs(dist - vano_length)/vano_length > 10.0:
+
+        if 100*abs(dist - vano_length)/vano_length > 20.0:
 
             logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
+            logger.trace(f"Vano length, distance {vano_length, dist}")
             logger.warning("SOLO HAY 1 APOYO")
             
-            plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
-            plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
-            plt.title('Custom 1D K-means Clustering')
+            if coord == 0:
+                coord1, coord2 = 1, 2
+            else:
+                coord1, coord2 = 0, 2
+            
+            plt.subplot(121)
+            plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
+            plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
             plt.xlabel('X Coordinate')
             plt.ylabel('Y Coordinate')
+            plt.subplot(122)
+            plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
+            plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
+            plt.xlabel('X Coordinate')
+            plt.ylabel('Z Coordinate')
+            plt.title(f'Custom 1D K-means Clustering for coord {coord}')
+        
             plt.show()
             
             return -1
-
-
+                        
     # z_vals = np.stack([np.array(extremos)[0,2], np.array(extremos)[1,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
     z_vals = np.stack([np.array(extremos)[2,2], np.array(extremos)[3,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
     y_vals =  np.stack([np.array(extremos)[2,1], np.array(extremos)[3,1], np.array(extremos)[0,1], np.array(extremos)[1,1]])

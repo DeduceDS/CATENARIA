@@ -28,14 +28,17 @@ def analyze_backings(vano_length, apoyo_values, extremos_values, dataf=None):
     start_time1 = time.time()
 
     logger.info(f"Analyzing backings")
+        
+    # apoyo_values = np.array(clean_outliers_2(apoyo_values))
     
-    if len(extremos_values) != 4:
-        logger.warning(f"Only 2 backings")
+    logger.trace(f"{np.std(apoyo_values[0,:]), np.std(apoyo_values[1,:])}")
     
-    apoyo_values = np.array(clean_outliers_2(apoyo_values))
+    coord = np.argmax([np.std(apoyo_values[0,:]), np.std(apoyo_values[1,:])], axis = 0)
+    
+    logger.trace(f"{coord}")
     
     # Redefine and compute new extreme values
-    extremos_values = define_backings(vano_length,apoyo_values)
+    extremos_values = define_backings(vano_length,apoyo_values,coord)
     
     end_time1 = time.time()
     
