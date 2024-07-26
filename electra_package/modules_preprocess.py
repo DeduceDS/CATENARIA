@@ -381,13 +381,13 @@ def clean_outliers_2(rotated_conds):
     numpy.ndarray: The cleaned conductor points with outliers removed based on IQR.
     """
 
-    logger.info("Cleaning outliers with IQR")
-    lx=pd.Series(rotated_conds[0,:]).quantile(0.25)
-    ux=pd.Series(rotated_conds[0,:]).quantile(0.75)
-    ly=pd.Series(rotated_conds[1,:]).quantile(0.25)
-    uy=pd.Series(rotated_conds[1,:]).quantile(0.75)
-    lz=pd.Series(rotated_conds[2,:]).quantile(0.25)
-    uz=pd.Series(rotated_conds[2,:]).quantile(0.75)
+    logger.trace("Cleaning outliers with IQR")
+    lx=pd.Series(rotated_conds[0,:]).quantile(0.20)
+    ux=pd.Series(rotated_conds[0,:]).quantile(0.80)
+    ly=pd.Series(rotated_conds[1,:]).quantile(0.20)
+    uy=pd.Series(rotated_conds[1,:]).quantile(0.80)
+    lz=pd.Series(rotated_conds[2,:]).quantile(0.20)
+    uz=pd.Series(rotated_conds[2,:]).quantile(0.80)
     rotated_conds=rotated_conds[:,(rotated_conds[0,:]>lx-1.5*(ux-lx))&(rotated_conds[0,:]<ux+1.5*(ux-lx))]
     rotated_conds=rotated_conds[:,(rotated_conds[1,:]>ly-1.5*(uy-ly))&(rotated_conds[1,:]<uy+1.5*(uy-ly))]
     rotated_conds=rotated_conds[:,(rotated_conds[2,:]>lz-1.5*(uz-lz))&(rotated_conds[2,:]<uz+1.5*(uz-lz))]
@@ -444,6 +444,11 @@ def clean_outliers_4(cropped_conds):
     return cropped_conds
 
 #### SCALE FUNCTIONS ####
+
+def scale_vertices(rotated_vertices, scaler_x, scaler_y, scaler_z):
+    
+    scaled_vertices = [np.array([scaler_x.fit_transform(vert[0,:].reshape(-1, 1)), scaler_y.fit_transform(vert[1,:].reshape(-1, 1)), scaler_z.fit_transform(vert[2,:].reshape(-1, 1))]) for vert in rotated_vertices]
+    return scaled_vertices
 
 def scale_conductor(X):
     """
@@ -644,6 +649,7 @@ def define_backings(vano_length, apoyo_values, coord):
             else:
                 coord1, coord2 = 0, 2
             
+            plt.figure(figsize=(12,8))
             plt.subplot(121)
             plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
             plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')

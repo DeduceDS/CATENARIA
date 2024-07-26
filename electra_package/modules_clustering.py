@@ -5,6 +5,7 @@ from sklearn.neighbors import kneighbors_graph
 from sklearn import metrics
 from sklearn.cluster import SpectralClustering
 from sklearn.cluster import DBSCAN
+import matplotlib.pyplot as plt
 
 #### FUNCTIONS FOR CLUSTERING ####
 def initialize_centroids(points, n_clusters, coord):
@@ -18,7 +19,7 @@ def initialize_centroids(points, n_clusters, coord):
     Returns:
     numpy.ndarray: The initialized centroids.
     """
-    logger.debug(f"Initializing for {n_clusters} clusters")
+    logger.trace(f"Initializing for {n_clusters} clusters")
     centroids = np.zeros(n_clusters)
     
     centroids[0] = np.min(points[coord, :])
@@ -85,94 +86,40 @@ def kmeans_clustering(points, n_clusters, max_iterations, coord):
         labels = assign_clusters(points, centroids, coord)
         new_centroids = update_centroids(points, labels, n_clusters, coord)
         if np.allclose(new_centroids, centroids):
-            logger.debug(f"Convergence reached at iteration {iteration}")
+            logger.trace(f"Convergence reached at iteration {iteration}")
             break
         centroids = new_centroids
     return labels, centroids
 
-# def initialize_centroids(points, n_clusters):
-#     """
-#     Initialize centroids for clustering based on the minimum, maximum1, and optionally mean of the x-coordinates.
+def plot_clusters(points, labels, centroids, coord):
+    """
+    Plot the clusters and centroids.
 
-#     Parameters:
-#     points (numpy.ndarray): The x, y, and z coordinates of the points.
-#     n_clusters (int): The number of clusters.
+    Parameters:
+    points (numpy.ndarray): The x, y, and z coordinates of the points.
+    labels (numpy.ndarray): The cluster labels for each point.
+    centroids (numpy.ndarray): The centroids.
+    coord (int): The coordinate axis used for clustering.
+    """
+    if coord == 0:
+        coord1, coord2 = 1, 2
+    elif coord == 1:
+        coord1, coord2 = 0, 2
+    else:
+        coord1, coord2 = 0, 1
 
-#     Returns:
-#     numpy.ndarray: The initialized centroids.
-#     """
-#     centroids = np.zeros((n_clusters))
-    
-#     centroids[0] = np.min(points[0,:])
-#     centroids[1] = np.max(points[0,:])
-    
-#     if n_clusters > 2:
-#         centroids[2] = np.mean(points[0,:])
-    
-#     return centroids
-
-# def assign_clusters(points, centroids):
-#     """
-#     Assign points to the nearest centroid based on x-coordinate distance.
-
-#     Parameters:
-#     points (numpy.ndarray): The x, y, and z coordinates of the points.
-#     centroids (numpy.ndarray): The coordinates of the centroids.
-
-#     Returns:
-#     numpy.ndarray: The index of the nearest centroid for each point.
-#     """
-    
-#     distances = np.abs(points[0][:, None] - centroids)
-#     return np.argmin(distances, axis=1)
-
-# def update_centroids(points, labels, n_clusters):
-#     """
-#     Update the centroids based on the mean of the points assigned to each cluster.
-
-#     Parameters:
-#     points (numpy.ndarray): The x, y, and z coordinates of the points.
-#     labels (numpy.ndarray): The cluster assignment for each point.
-#     n_clusters (int): The number of clusters.
-
-#     Returns:
-#     numpy.ndarray: The updated centroids.
-#     """
-    
-#     new_centroids = np.zeros(n_clusters)
-#     for i in range(n_clusters):
-#         cluster_points = points[0, labels == i]
-#         if cluster_points.size > 0:
-#             new_centroids[i] = np.mean(cluster_points)
-#     return new_centroids
-
-# def kmeans_clustering(points, n_clusters, max_iterations):
-    
-#     """
-#     Perform k-means clustering on a set of points.
-
-#     Parameters:
-#     points (numpy.ndarray): The x, y, and z coordinates of the points.
-#     n_clusters (int): The number of clusters.
-#     max_iterations (int): The maximum number of iterations.
-
-#     Returns:
-#     tuple: A tuple containing the labels for each point and the final centroids.
-#     """
-    
-#     centroids = initialize_centroids(points, n_clusters)
-#     for iteration in range(max_iterations):
-#         labels = assign_clusters(points, centroids)
-#         new_centroids = update_centroids(points, labels, n_clusters)
-#         if np.allclose(new_centroids, centroids):
-#             break
-#         centroids = new_centroids
-
-#     # print(labels.shape)
-#     # print(np.unique(labels))
-#     # print(centroids.shape)
-    
-#     return labels, centroids
+    plt.figure(figsize=(12,8))
+    plt.subplot(1,2,1)
+    plt.scatter(points[coord, :], points[coord1, :], c=labels, cmap='viridis', s=1)
+    plt.vlines(centroids, ymin=np.min(points[coord1, :]), ymax=np.max(points[coord1, :]), color='red', label='Centroids')
+    plt.subplot(1,2,2)
+    plt.scatter(points[coord, :], points[coord2, :], c=labels, cmap='viridis', s=1)
+    plt.vlines(centroids, ymin=np.min(points[coord2, :]), ymax=np.max(points[coord2, :]), color='red', label='Centroids')
+    plt.title(f'Clusters along {["X", "Y", "Z"][coord]}-axis vs {["X", "Y", "Z"][coord1]}-axis')
+    plt.xlabel(f'{["X", "Y", "Z"][coord]} Coordinate')
+    plt.ylabel(f'{["X", "Y", "Z"][coord1]} Coordinate')
+    plt.legend()
+    plt.show()
 
 
 def spectral_clustering(points, n_clusters, n_init):

@@ -116,7 +116,7 @@ def extract_vano_values(vano):
     vert_values = []
 
     for element in vano['CONDUCTORES']:
-        vert_values.append(get_coord(element['VERTICES']))
+        vert_values.append(np.array(get_coord(element['VERTICES'])))
     
     return idv, vano_length, np.array(cond_values), np.array(apoyo_values), vert_values, extremos_values
 

@@ -31,11 +31,11 @@ def analyze_backings(vano_length, apoyo_values, extremos_values, dataf=None):
         
     # apoyo_values = np.array(clean_outliers_2(apoyo_values))
     
-    logger.trace(f"{np.std(apoyo_values[0,:]), np.std(apoyo_values[1,:])}")
+    logger.trace(f"Variance distribution in backings {np.std(apoyo_values[0,:]), np.std(apoyo_values[1,:])}")
     
     coord = np.argmax([np.std(apoyo_values[0,:]), np.std(apoyo_values[1,:])], axis = 0)
     
-    logger.trace(f"{coord}")
+    logger.debug(f"Max variance coordinate for backings {coord}")
     
     # Redefine and compute new extreme values
     extremos_values = define_backings(vano_length,apoyo_values,coord)
@@ -110,7 +110,7 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
     # Conductor geometry/configuration analysis
     # Let's study and categorize this vano in terms of it's conductors
     
-    logger.success(f"Analyzing conductor configuration")
+    logger.info(f"Analyzing conductor configuration 1")
     
     # Find clusters in 10 cloud of points corresponding to 3 positions in y axis
     # Define boundaries of the conductor to extract min, max values and length
@@ -155,7 +155,8 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
     if dataf is not None:
         # Save the final number of conductors detected (number of lines)
         dataf['line_number'].append(md)
-    logger.info(f'Number of lines: {md}')
+        
+    logger.info(f'Number of lines from mode: {md}')
     
     # Do the same for the x vs z variance relation
     var_z_x=mode(greater_var_z_than_x)
@@ -173,7 +174,7 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
     
     end_time2 = time.time()
     
-    logger.debug(f"Third time {end_time2-start_time2}")
+    logger.trace(f"Third time {end_time2-start_time2}")
 
     return dataf, finc, md
 
