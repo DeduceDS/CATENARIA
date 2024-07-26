@@ -22,7 +22,7 @@ def set_logger(level):
     logger.add(sys.stdout, format = "<lvl>{message}</lvl>", colorize=True, backtrace=True, diagnose=True, level=level)  
 
 
-def analyze_backings(vano_length, apoyo_values, extremos_values, dataf=None):
+def analyze_backings(vano_length, apoyo_values, extremos_values):
     
     # Start the timer
     start_time1 = time.time()
@@ -53,18 +53,13 @@ def analyze_backings(vano_length, apoyo_values, extremos_values, dataf=None):
         logger.warning("UN APOYO LIDAR")
         # plot_data(f"{idv}",cond_values, apoyo_values, vert_values, extremos_values)
         
-        if dataf != None:
-            
-            dataf['flag'].append('bad_backing')
-            dataf['line_number'].append(0)
-        
-        return dataf, -1
+        return -1
     
     # Plot filter to plot bad cases?
     # if any([plot_filter=='all',plot_filter=='bad_backing']):
         # plot_vano(f'{idv} Bad_Backing',X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
         
-    return dataf, list(extremos_values)
+    return list(extremos_values)
 
 def preprocess_conductors(cond_values, extremos_values, apoyo_values, vert_values):
             
@@ -156,7 +151,7 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
         # Save the final number of conductors detected (number of lines)
         dataf['line_number'].append(md)
         
-    logger.info(f'Number of lines from mode: {md}')
+    logger.success(f'Number of lines from mode: {md}')
     
     # Do the same for the x vs z variance relation
     var_z_x=mode(greater_var_z_than_x)
@@ -171,6 +166,8 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
     completeness_conds=np.array([num_empty>5,all([num_empty<=5,num_empty>=2]),num_empty<2])
     # Extract final value with index
     finc = completeness[completeness_conds]
+    
+    logger.success(f'Completeness value: {finc}')
     
     end_time2 = time.time()
     

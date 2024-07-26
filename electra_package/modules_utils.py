@@ -23,9 +23,14 @@ def print_element(element):
             print(f"\n{key}: ")
 
             if type(element[key]) == list:
-
-                element2 = element[key][0]
+                
                 print(f"- Length of list: {len(element[key])}")
+                
+                if len(element[key]) == 0:
+                    continue
+                
+                element2 = element[key][0]
+                    
 
             else:
 

@@ -306,17 +306,34 @@ def clean_outliers(rotated_conds, rotated_extremos):
     """
     
     logger.info(f"Cropping conductor with backings")
-    # print(f"Shape 0: {np.array(rotated_extremos).shape}")
-    
-    #Get left and right extreme values
-    left = np.max([rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
-    right = np.min([rotated_extremos.T[0][1],rotated_extremos.T[1][1]])
 
-    # print(right-left)
-    # print(rotated_extremos)
+    #Get left and right extreme values
+    # left = np.max([rotated_extremos.T[0][1], rotated_extremos.T[1][1], rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
+    # right = np.min([rotated_extremos.T[0][1], rotated_extremos.T[1][1], rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
     
+    # left = np.max([rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
+    # right = np.min([rotated_extremos.T[0][1],rotated_extremos.T[1][1]])
+
+    # top = np.max([rotated_extremos.T[0][2], rotated_extremos.T[1][2], rotated_extremos.T[2][2],rotated_extremos.T[3][2]])
+    # bottom = np.min([rotated_extremos.T[0][2], rotated_extremos.T[1][2], rotated_extremos.T[2][2],rotated_extremos.T[3][2]])
+    
+    top = np.max(rotated_extremos, axis = 1)[2]
+    bottom = np.min(rotated_extremos, axis = 1)[2]
+    
+    left = np.min(rotated_extremos, axis = 1)[1]
+    right = np.max(rotated_extremos, axis = 1)[1]
+    
+    # print(top, bottom, np.max(rotated_conds, axis = 1)[2], np.min(rotated_conds, axis = 1)[2])
+    # print(left, right, np.max(rotated_conds, axis = 1)[1], np.min(rotated_conds, axis = 1)[1])
+
     # Filter points within the specified boundaries
     cropped_conds = rotated_conds[:, (right > rotated_conds[1,:]) & (rotated_conds[1,:] > left)]
+    cropped_conds = cropped_conds[:, (top > cropped_conds[2,:]) & (cropped_conds[2,:] > bottom)]
+    
+    # print(top, np.max(cropped_conds[2,:]))
+
+    # Filter points within the specified boundaries
+    # if top > np.max(cropped_conds[2,:]):   
     
     # print(f"Shape 1: {cropped_conds.shape}")
 
@@ -367,6 +384,12 @@ def clean_outliers(rotated_conds, rotated_extremos):
     p99 = np.percentile(cropped_conds[0, :], 98)
 
     cropped_conds = cropped_conds[:,(cropped_conds[0, :] > p1) & (cropped_conds[0, :] < p99)]
+    
+        # Erase X axis outliers
+    p1 = np.percentile(cropped_conds[2, :], 2)
+    p99 = np.percentile(cropped_conds[2, :], 98)
+
+    cropped_conds = cropped_conds[:,(cropped_conds[2, :] > p1) & (cropped_conds[2, :] < p99)]
 
     return cropped_conds
 
@@ -649,20 +672,20 @@ def define_backings(vano_length, apoyo_values, coord):
             else:
                 coord1, coord2 = 0, 2
             
-            plt.figure(figsize=(12,8))
-            plt.subplot(121)
-            plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
-            plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
-            plt.xlabel('X Coordinate')
-            plt.ylabel('Y Coordinate')
-            plt.subplot(122)
-            plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
-            plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
-            plt.xlabel('X Coordinate')
-            plt.ylabel('Z Coordinate')
-            plt.title(f'Custom 1D K-means Clustering for coord {coord}')
+            # plt.figure(figsize=(12,8))
+            # plt.subplot(121)
+            # plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
+            # plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
+            # plt.xlabel('X Coordinate')
+            # plt.ylabel('Y Coordinate')
+            # plt.subplot(122)
+            # plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
+            # plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
+            # plt.xlabel('X Coordinate')
+            # plt.ylabel('Z Coordinate')
+            # plt.title(f'Custom 1D K-means Clustering for coord {coord}')
         
-            plt.show()
+            # plt.show()
             
             return -1
                         
