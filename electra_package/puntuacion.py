@@ -722,6 +722,7 @@ def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
     len_conductores = len(conductores)
     clasificacion1['Vano'].append(num_el['ID_VANO'])
     longitud = num_el['LONGITUD_2D']
+    
     if len_apoyos == 2:
         if len_conductores >= 3:
             

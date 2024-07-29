@@ -144,6 +144,52 @@ def mod_extremos(data,new_extremos,ids):
 
 #### FUNCTIONS TO TRANSFORM/PREPROCESS 3D POINTS ####
 
+def random_sampling(point_cloud, num_points):
+    logger.debug(f"random sampling for: {num_points}")
+    if point_cloud.shape[1] <= num_points:
+        return point_cloud
+    indices = np.random.choice(int(point_cloud.shape[1]), int(num_points), replace=False)
+    return point_cloud[:, indices]
+
+    
+def voxel_grid_downsampling_with_centroids(point_cloud, voxel_size):
+    """
+    Perform voxel grid downsampling on 3D points, using the centroid of points within each voxel.
+
+    Args:
+        point_cloud (numpy.ndarray): Input points of shape (3, N).
+        voxel_size (float): Size of the voxel.
+
+    Returns:
+        numpy.ndarray: Downsampled points of shape (3, M).
+    """
+    logger.trace(f"voxel grid downsampling for: {voxel_size}")
+    xyz_min = np.min(point_cloud, axis=1, keepdims=True)
+    grid = np.floor((point_cloud - xyz_min) / voxel_size).astype(int)
+    
+    voxel_dict = {}
+    for i, g in enumerate(grid.T):
+        key = tuple(g)
+        if key not in voxel_dict:
+            voxel_dict[key] = []
+        voxel_dict[key].append(point_cloud[:, i])
+    
+    downsampled_points = []
+    for voxel_points in voxel_dict.values():
+        centroid = np.mean(voxel_points, axis=0)
+        downsampled_points.append(centroid)
+    
+    downsampled_points = np.array(downsampled_points).T
+    
+    return downsampled_points
+
+def down_sample_lidar(apoyo_values, cond_values):
+    
+    apoyo_values = voxel_grid_downsampling_with_centroids(apoyo_values, 0.25)
+    cond_values = voxel_grid_downsampling_with_centroids(cond_values, 0.25)
+    
+    return apoyo_values, cond_values
+
 def pretreatment_linegroup(parameters):
     """
     Preprocess and clean the parameters data for line groups.
@@ -333,64 +379,63 @@ def clean_outliers(rotated_conds, rotated_extremos):
     # print(top, np.max(cropped_conds[2,:]))
 
     # Filter points within the specified boundaries
-    # if top > np.max(cropped_conds[2,:]):   
     
-    # print(f"Shape 1: {cropped_conds.shape}")
+    logger.trace(f"Shape 1: {cropped_conds.shape}")
 
-    # # Paso 1: Calcular el histograma de las coordenadas Y
-    # hist, bin_edges = np.histogram(cropped_conds[1, :], bins=200)
+    # Paso 1: Calcular el histograma de las coordenadas Y
+    hist, bin_edges = np.histogram(cropped_conds[1, :], bins=200)
 
-    # # Paso 2: Identificar los picos significativos en ambos extremos del histograma
-    # # Definir un umbral para considerar un pico significativo
-    # threshold_density = np.mean(hist) + 2 * np.std(hist)
+    # Paso 2: Identificar los picos significativos en ambos extremos del histograma
+    # Definir un umbral para considerar un pico significativo
+    threshold_density = np.mean(hist) + 3*np.std(hist)
 
-    # # Encontrar el bin con la mayor cantidad de puntos en la parte superior
-    # peak_bin_upper = np.argmax(hist[:len(hist)//2])
-    # # Encontrar el bin con la mayor cantidad de puntos en la parte inferior
-    # peak_bin_lower = np.argmax(hist[len(hist)//2:]) + len(hist)//2
+    # Encontrar el bin con la mayor cantidad de puntos en la parte superior
+    peak_bin_upper = np.argmax(hist[:len(hist)//2])
+    # Encontrar el bin con la mayor cantidad de puntos en la parte inferior
+    peak_bin_lower = np.argmax(hist[len(hist)//2:]) + len(hist)//2
 
-    # # Inicializar los umbrales
-    # threshold_y_upper = None
-    # threshold_y_lower = None
+    # Inicializar los umbrales
+    threshold_y_upper = None
+    threshold_y_lower = None
     
-    # # Verificar si hay una línea horizontal significativa en la parte superior
-    # if hist[peak_bin_upper] > threshold_density:
-    #     threshold_y_upper = bin_edges[peak_bin_upper + 1]  # El +1 es para obtener el borde superior del bin
-    #     logger.debug(f"Umbral de corte superior detectado: {threshold_y_upper}")
+    # Verificar si hay una línea horizontal significativa en la parte superior
+    if hist[peak_bin_upper] > threshold_density:
+        threshold_y_upper = bin_edges[peak_bin_upper + 1]  # El +1 es para obtener el borde superior del bin
+        logger.debug(f"Umbral de corte superior detectado: {threshold_y_upper}")
 
-    # # Verificar si hay una línea horizontal significativa en la parte inferior
-    # if hist[peak_bin_lower] > threshold_density:
-    #     threshold_y_lower = bin_edges[peak_bin_lower]  # No se necesita ajustar más
-    #     logger.debug(f"Umbral de corte superior detectado: {threshold_y_lower}")
+    # Verificar si hay una línea horizontal significativa en la parte inferior
+    if hist[peak_bin_lower] > threshold_density:
+        threshold_y_lower = bin_edges[peak_bin_lower]  # No se necesita ajustar más
+        logger.debug(f"Umbral de corte superior detectado: {threshold_y_lower}")
 
-    # # Paso 3: Filtrar los puntos usando los umbrales detectados
-    # if threshold_y_upper is not None:
-    #     cropped_conds = cropped_conds[:, cropped_conds[1, :] > threshold_y_upper]
+    # Paso 3: Filtrar los puntos usando los umbrales detectados
+    if threshold_y_upper is not None:
+        cropped_conds = cropped_conds[:, cropped_conds[1, :] > threshold_y_upper]
 
-    # if threshold_y_lower is not None:
-    #     cropped_conds = cropped_conds[:, cropped_conds[1, :] < threshold_y_lower]
+    if threshold_y_lower is not None:
+        cropped_conds = cropped_conds[:, cropped_conds[1, :] < threshold_y_lower]
         
-    # print(f"Shape 2: {cropped_conds.shape}")
+    print(f"Shape 2: {cropped_conds.shape}")
     
-    # Calcular percentiles 1 y 99
-    p1 = np.percentile(cropped_conds[1, :], 2)
-    p99 = np.percentile(cropped_conds[1, :], 98)
+    # # Calcular percentiles 1 y 99
+    # p1 = np.percentile(cropped_conds[1, :], 2)
+    # p99 = np.percentile(cropped_conds[1, :], 98)
 
-    # Filtrar los datos para eliminar el 5% de los puntos con menor y mayor coordenada Y
-    cropped_conds = cropped_conds[:,(cropped_conds[1, :] > p1) & (cropped_conds[1, :] < p99)]
+    # # Filtrar los datos para eliminar el 5% de los puntos con menor y mayor coordenada Y
+    # cropped_conds = cropped_conds[:,(cropped_conds[1, :] > p1) & (cropped_conds[1, :] < p99)]
 
     # Erase X axis outliers
-    p1 = np.percentile(cropped_conds[0, :], 2)
-    p99 = np.percentile(cropped_conds[0, :], 98)
+    # p1 = np.percentile(cropped_conds[0, :], 2)
+    # p99 = np.percentile(cropped_conds[0, :], 98)
 
-    cropped_conds = cropped_conds[:,(cropped_conds[0, :] > p1) & (cropped_conds[0, :] < p99)]
+    # cropped_conds = cropped_conds[:,(cropped_conds[0, :] > p1) & (cropped_conds[0, :] < p99)]
     
-        # Erase X axis outliers
-    p1 = np.percentile(cropped_conds[2, :], 2)
-    p99 = np.percentile(cropped_conds[2, :], 98)
+    #     # Erase Z axis outliers
+    # p1 = np.percentile(cropped_conds[2, :], 2)
+    # p99 = np.percentile(cropped_conds[2, :], 98)
 
-    cropped_conds = cropped_conds[:,(cropped_conds[2, :] > p1) & (cropped_conds[2, :] < p99)]
-
+    # cropped_conds = cropped_conds[:,(cropped_conds[2, :] > p1) & (cropped_conds[2, :] < p99)]
+    
     return cropped_conds
 
 def clean_outliers_2(rotated_conds):

@@ -1,13 +1,15 @@
 
 from loguru import logger
 from statistics import mode
+import time
+import sys
+from scipy.stats import linregress
+
 from electra_package.modules_utils import *
 from electra_package.modules_clustering import *
 from electra_package.modules_preprocess import *
 from electra_package.modules_plots import *
 from electra_package.modules_fits import *
-import time
-import sys
 
 
 def set_logger(level):
@@ -20,7 +22,7 @@ def set_logger(level):
     except ValueError:
         logger.level("TITLE", color="<bold><fg 86>", no=21)
     logger.add(sys.stdout, format = "<lvl>{message}</lvl>", colorize=True, backtrace=True, diagnose=True, level=level)  
-
+    logger.info(f"Setting logger")
 
 def analyze_backings(vano_length, apoyo_values, extremos_values):
     
@@ -61,36 +63,166 @@ def analyze_backings(vano_length, apoyo_values, extremos_values):
         
     return list(extremos_values)
 
-def preprocess_conductors(cond_values, extremos_values, apoyo_values, vert_values):
+def analyze_conductor_configuration(X_scaled):
+    
+    logger.info(f"Analyzing conductor configuration 2")
+    
+    a1,b1 = np.histogram(X_scaled[0,:]/np.max(X_scaled[0,:]), bins=5)
+    a2,b2 = np.histogram(X_scaled[1,:]/np.max(X_scaled[1,:]), bins=5)
+    a3,b3 = np.histogram(X_scaled[2,:]/np.max(X_scaled[2,:]), bins=5)
+    
+    normalized_a1 = a1/np.max(a1)
+    normalized_a2 = a2/np.max(a2)
+    normalized_a3 = a3/np.max(a3)
+    
+    vars = [np.std(normalized_a1), np.std(normalized_a2), np.std(normalized_a3)]
+    
+    max_var = np.argmax(vars)
+    min_var = np.argmin(vars)
+    
+    cond1 = np.abs(np.max(normalized_a1)-np.min(normalized_a1)) > np.abs(np.max(normalized_a2)-np.min(normalized_a2))
+    cond2 = np.abs(np.max(normalized_a3)-np.min(normalized_a3)) > np.abs(np.max(normalized_a2)-np.min(normalized_a2))
+    
+    cond3 = (max_var == 0)
+    cond4 = (max_var == 2)
+    
+    # cond5 = (min_var/max_var < 0.5)
+    
+    logger.debug(f"Conductor variances {np.std(normalized_a1)} ,{np.std(normalized_a2)}, {np.std(normalized_a3)}")
+    logger.debug(f"Histogram and variance conditions (x,z) {cond1,cond3}, {cond2,cond4}")
+    logger.trace(f"Horizontal condition {np.abs(np.max(normalized_a1)-np.min(normalized_a1))} , {np.abs(np.max(normalized_a2)-np.min(normalized_a2))}, {np.abs(np.max(normalized_a3)-np.min(normalized_a3))}")
+    
+    logger.success(f"Max var coordinate for conductors {max_var}")
+
+    if cond1 and cond3:
+
+            logger.success("Distribución horizontal")
+            return 0, max_var
             
-    start_time2 = time.time()
+    else:
+            logger.warning("Other geometry")
+            
+            # plt.figure(figsize=(12,8))
+            # plt.hist(X_scaled[0,:], bins = 5, label = "x", alpha = 0.5)
+            # plt.hist(X_scaled[1,:], bins = 5, label = "y", alpha = 0.5)
+            # plt.hist(X_scaled[2,:], bins = 5, label = "z", alpha = 0.5)
+            # plt.title("Coordinate distribution")
+            # plt.legend()
+            # plt.show()
+                
+            
+            if cond2 and cond4:
+                
+                logger.success("Distribución vertical")
+                return 1, max_var
+            
+            else:
+                logger.warning(f"Unrecognized geometry: variances {np.std(normalized_a1), np.std(normalized_a2), np.std(normalized_a3)}")
+                return 0, 0
     
-    logger.success(f"Rotating vano")
-    # Preform rotation of all data 3D points over z axis to align the conductor diagonal with the Y axis.
-    mat,rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
+            
+def cluster_and_evaluate(X_scaled, n_conds, coord):
+    
+    good_clust = False
+    clusters = []      
 
-    ##########################################
-    
-    logger.success(f"Cropping conductor")
-    # Crop conductor LIDAR points and clean outliers before any transformation
-    cropped_conds = clean_outliers(rotated_conds, rotated_extremos)
-    cropped_conds = clean_outliers_2(cropped_conds) # More crop?
-    cropped_conds = clean_outliers_3(cropped_conds)
+    for i in range(2):
 
-    # outliers = pcd_o3d.select_by_index(filtered_points[1], invert=True)
-    
-    ##########################################
-    
-    # Scale conductor 3D points and get the scaler models
-    X_scaled,scaler_x,scaler_y,scaler_z = scale_conductor(cropped_conds) # Scale now?
-    
-    end_time2 = time.time()
+        labels, centroids = kmeans_clustering(X_scaled, n_conds, 500, coord)
+        max_size = 0
         
-    logger.debug(f"Third time {end_time2-start_time2}")
-    
-    return X_scaled, cropped_conds, rotated_extremos, rotated_vertices, scaler_y
+        for lab in labels:
+            clust = X_scaled[:, labels == lab]
+            
+            if 100*(clust.shape[1]/len(labels)) > max_size: max_size = 100*(clust.shape[1]/len(labels))
+        
+        if abs(max_size - (100/n_conds)) > 10:  #### CHECK ###
+            
+            # logger.trace(f"bad cluster proportion, {100*(clust.shape[1]/len(labels)), (100/n_conds)}")
+            # if  n_conds == 2 and abs(100*(clust.shape[1]/len(labels)) - (100/n_conds)) > 20:
+            
+            logger.debug(f"{clust.shape[1],len(labels)}")
+            logger.debug(f"break, bad clusters, {max_size, (100/n_conds)}")
+            good_clust = False
+            
+            # if n_conds != 2:
+            #     plot_clusters(X_scaled, labels, centroids, coord)
+                
+            return good_clust, clusters
+            
+                
+        min_cent = np.min(centroids)
+        max_cent = np.max(centroids)
+        mid_cent = np.mean(centroids)
+        
+        # mid_cent = centroids[(centroids != min_cent)*(centroids != max_cent)]
 
-def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos, cropped_conds, dataf=None):
+        cent_dist1 = abs(mid_cent - max_cent)
+        cent_dist2 = abs(mid_cent - min_cent)
+        
+        diff = abs(cent_dist1-cent_dist2)
+        
+        logger.trace(f"Good centroids condition, {diff/abs(max_cent-min_cent)}")
+        
+        if (diff/abs(max_cent-min_cent) < 1.0):
+            
+            logger.success("GOOD CENTROIDS")
+            
+            min_max = []
+            
+            for lab in np.unique(labels):
+                
+                clusters.append(X_scaled[:, labels == lab])
+                min_max.append((np.min(X_scaled[coord, labels == lab]),np.max(X_scaled[coord, labels == lab])))
+                
+            logger.debug(f"{len(clusters)}")
+            
+            if len(clusters) != n_conds:
+                # raise ValueError(f"Bad clustering")
+                logger.error(f"Bad clustering len(clusters) != n_conds")
+                # plot_clusters(X_scaled, labels, centroids, coord)
+                good_clust = False
+                return good_clust, clusters
+                
+            # Check for overlapping clusters
+            overlapping_clusters = []
+            for k, (min_x_k, max_x_k) in enumerate(min_max):
+                for j, (min_x_j, max_x_j) in enumerate(min_max):
+                    
+                    if k != j:
+                        
+                        dist1 = abs(min_x_k - max_x_j)
+                        dist2 = abs(min_x_j - max_x_k)
+                        
+                        # logger.trace(f"Overlapping centroids condition, {dist1/abs(max_cent-min_cent), dist2/abs(max_cent-min_cent)}")
+                        if (dist1/abs(max_cent-min_cent) < 0 or dist2/abs(max_cent-min_cent) < 0):
+                            overlapping_clusters.append(k)
+                            
+            if len(overlapping_clusters) == 0:
+                logger.success(f"GOOD CLUSTERS: found {n_conds}")
+                # plot_clusters(X_scaled, labels, centroids, coord)
+                good_clust = True
+                return good_clust, clusters
+            
+            
+            else:
+                logger.warning("OVERLAPPING CLUSTERS")
+                # plot_clusters(X_scaled, labels, centroids, coord)
+                # good_clust = False
+                return good_clust, clusters
+                
+        else:
+            logger.debug(f"TRY {i}")
+            continue
+
+    if not good_clust:
+        logger.warning(f"BAD CLUSTERS AFTER {i} TRIALS")
+        # plot_clusters(X_scaled, labels, centroids, coord)
+        
+    return good_clust, clusters
+        
+
+def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos, cropped_conds):
     
     start_time2 = time.time()
     
@@ -146,10 +278,6 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
     ##########################################
     # Obtain the mode of n_clusters along the list of size 10 == number of conductors
     md=mode(ncl)
-    
-    if dataf is not None:
-        # Save the final number of conductors detected (number of lines)
-        dataf['line_number'].append(md)
         
     logger.success(f'Number of lines from mode: {md}')
     
@@ -173,142 +301,89 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
     
     logger.trace(f"Third time {end_time2-start_time2}")
 
-    return dataf, finc, md
+    return finc, md
 
 
-def preprocess_prefit(cond_values):
-    end_time3 = time.time()
+def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
     
-    logger.success(f"Starting fit")
+    logger.info(f"Fitting with catenaria function")
     
-    logger.success(f"Rotating vano")
-    
-    # Get rotated cond points and extreme values again?
-    mat, rotated_conds = rotate_points(cond_values, extremos_values)
-    extremos_values = mat.dot(extremos_values)
-    
-    filter_start = time.time()
-    
-    logger.success(f"Filtering conductor")
-    
-    # Filter conductor values between extreme values again?
-    x, y, z = filtering_prefit_2(rotated_conds, extremos_values)
-    
-    filter_end = time.time()
-    
-    logger.debug(f"Filtering time {filter_end-filter_start}")
-    
-    # x, y, z = np.array(rotated_conds)[0], np.array(rotated_conds)[1], np.array(rotated_conds)[2]
-    
-    ########################
-    
-    logger.success(f"Applying spectral clustering")
-    
-    cluster_start = time.time()
-
-    # Clustering over cond values to extract each conductor individually
-    clusters = clustering_prefit_2(x,y,z)
-    
-    x1, y1, z1 = clusters[0][0,:], clusters[0][1,:], clusters[0][2,:]
-    x2, y2, z2 = clusters[1][0,:], clusters[1][1,:], clusters[1][2,:]
-    x3, y3, z3 = clusters[2][0,:], clusters[2][1,:], clusters[2][2,:]
-    
-    cluster_end = time.time()
-    
-    logger.debug(f"clustering time {cluster_end-cluster_start}")
-
-    ################
-    
-    logger.success(f"PCA filtering")
-    
-    pca_start = time.time()
-    
-    # PCA filtering over the conductor values
-    # x_filt_cond1, y_filt_cond1, z_filt_cond1 = PCA_filtering_prefit_2(x1, y1, z1)
-    # x_filt_cond2, y_filt_cond2, z_filt_cond2 = PCA_filtering_prefit_2(x2, y2, z2)
-    # x_filt_cond3, y_filt_cond3, z_filt_cond3 = PCA_filtering_prefit_2(x3, y3, z3)
-    
-    x_filt_cond1, y_filt_cond1, z_filt_cond1 = x1, y1, z1
-    x_filt_cond2, y_filt_cond2, z_filt_cond2 = x2, y2, z2
-    x_filt_cond3, y_filt_cond3, z_filt_cond3 = x3, y3, z3
-    
-    pca_end = time.time()
-    
-    logger.debug(f"PCA time {pca_end-pca_start}")
-    
-    #############################
-    
-    end_time4 = time.time()
-    
-    logger.debug(f"Fifth time {end_time4-end_time3}")
-                        
-    return x_filt_cond1, y_filt_cond1, z_filt_cond1, x_filt_cond2, y_filt_cond2, z_filt_cond2, x_filt_cond3, y_filt_cond3, z_filt_cond3, clusters
-
-def fit_reconstruct_conductors(y_filt_cond1, z_filt_cond1, 
-                                        y_filt_cond2, z_filt_cond2, 
-                                        y_filt_cond3, z_filt_cond3):
-    
-    end_time4 = time.time()
-    
-    def catenaria(x, a, h, k):
-        return a*np.cosh((x-h)/a)+k
-    
-    # def catenaria(x, a, b, c, d):
-    #     return a + b*x + c*x**2 + d*x**3
+    # def catenaria(x, a, h, k):
+    #     # return a*np.cosh((x-h)/a)+k
     
     p0 = [1, 0, 0]  # a, h, k
-    
+
+    # def catenaria(x, a, b, c, d):
+    #         return a + b*x + c*x**2 + d*x**3
     # p0 = [0, 1, 1, 1]
     
-    logger.success(f"Fitting catenaria to data")
+    x_pols = []
+    y_pols = []
+    z_pols = []
+    params = []
     
-    x_pol1, y_pol1, parametros1, metrics1 = fit_3D_coordinates(y_filt_cond1, z_filt_cond1, catenaria, p0)
-    x_pol2, y_pol2, parametros2, metrics2 = fit_3D_coordinates(y_filt_cond2, z_filt_cond2, catenaria, p0)
-    x_pol3, y_pol3, parametros3, metrics3 = fit_3D_coordinates(y_filt_cond3, z_filt_cond3, catenaria, p0)
+    logger.info(f"Interquartile filtering prefit")
+    # plt.figure(figsize=(12,8))
     
-    end_time5 = time.time()
+    for l,clus in enumerate(clusters):
+        
     
-    logger.debug(f"Sixth time {end_time5-end_time4}")
+        clus = clean_outliers_2(clus)
+        
+        y_pol, z_pol, parametros, metrics = fit_3D_coordinates_2(clus[1,:], clus[2,:], catenaria, p0)
+        slope, intercept, r_value1, p_value, std_err = linregress(clus[1,:], clus[0,:])
+        
+        x_pol = slope * y_pol + intercept
+        
+        x_pols.append(x_pol)
+        y_pols.append(y_pol)
+        z_pols.append(z_pol)
+        params.append(parametros)
+        
+    #     plt.subplot(1,3,l+1)
+    #     plt.scatter(clus[1,:], clus[2,:])
+    #     plt.scatter(y_pol, z_pol)
     
-    return x_pol1, y_pol1, parametros1, metrics1, x_pol2, y_pol2, parametros2, metrics2, x_pol3, y_pol3, parametros3, metrics3
+    # plt.show()
+    
+    logger.info(f"Evaluating fits")
 
-def evaluate_conductors(x_pol1, x_pol2, x_pol3, y_pol1, y_pol2, y_pol3,
-                                        parametros1, parametros2, parametros3, rotated_vertices, vano_length, clusters):
+    resultados_eval = evaluar_ajuste(y_pols, z_pols, rotated_vertices, vano_length, clusters)
+    
+    pols = [x_pols, y_pols, z_pols]
+    
+    return pols, params, resultados_eval, metrics
 
-    ########################## TONI
-    
-    end_time5 = time.time()
-    
-    logger.success(f"Evaluating fit")
-    
-    resultados_eval = evaluar_ajuste([x_pol1, x_pol2, x_pol3], [y_pol1, y_pol2, y_pol3], rotated_vertices, vano_length, clusters)
-    
-    end_time6 = time.time()
-    
-    logger.debug(f"Seventh time {end_time6-end_time5}")
-    
-    return resultados_eval, x_pol1, y_pol1, parametros1, x_pol2, y_pol2, parametros2,  x_pol3, y_pol3, parametros3
-    
 
-# def process_vano(vano_length, idv, cond_values, apoyo_values, vert_values, extremos_values, dataf=None):
+def puntuate_and_save(vano, fit1, fit2, fit3, params, evaluaciones):
     
-#     _, extremos_values = analyze_backings(vano_length, idv, cond_values, apoyo_values, vert_values, extremos_values, dataf=None)
+    logger.success(f"Saving results")
     
-#     X_scaled, cropped_conds, rotated_extremos, rotated_vertices, scaler_y = preprocess_conductors(cond_values, extremos_values, apoyo_values, vert_values)
+    if evaluaciones == (0, 0, 0, 0, 0, 0):
+        vano['flag'] = 'no_vertices'
+        
+    else:
+        vano["flag"] = "good_fit"
+        
+    vano['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
+    vano['CONDUCTORES_CORREGIDOS'][str(1)]=fit2.T.tolist()
+    vano['CONDUCTORES_CORREGIDOS'][str(2)]=fit3.T.tolist()
+    vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(0)]=params[0]
+    vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(1)]=params[1]
+    vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(2)]=params[2]
     
-#     dataf, finc = extract_conductor_config(X_scaled, scaler_y, cropped_conds, rotated_extremos, cropped_conds, dataf=None)
+    puntuacion=puntuación_por_vano(vano, evaluaciones).to_json()
+    puntuacion_dict = json.loads(puntuacion)
     
-#     x_filt_cond1, y_filt_cond1, z_filt_cond1, x_filt_cond2, y_filt_cond2, z_filt_cond2, x_filt_cond3, y_filt_cond3, z_filt_cond3, clusters = preprocess_prefit(cropped_conds)
+    for n in puntuacion_dict:
+        puntuacion_dict[n]=puntuacion_dict[n]["0"]
+        
+    del puntuacion_dict['Vano']
     
-#     x_pol1, y_pol1, parametros1, metrics1, x_pol2, y_pol2, parametros2, metrics2, x_pol3, y_pol3, parametros3, metrics3 = fit_reconstruct_conductors(y_filt_cond1, z_filt_cond1, 
-#                                                                                                                                                         y_filt_cond2, z_filt_cond2, 
-#                                                                                                                                                         y_filt_cond3, z_filt_cond3)
+    # puntuacion_dict['Continuidad']=finc[0]
+    puntuacion_dict['Conductores identificados']=vano['line_number']
+    puntuacion_dict['Output']=vano['flag']
+    vano['PUNTUACIONES']=puntuacion_dict
+                        
+    return vano
 
-#     resultados_eval, x_pol1, y_pol1, parametros1, x_pol2, y_pol2, parametros2,  x_pol3, y_pol3, parametros3 = evaluate_conductors(x_pol1, x_pol2, x_pol3, y_pol1, y_pol2, y_pol3,
-#                                                                                                                                     parametros1, parametros2, parametros3, rotated_vertices, vano_length, clusters)
-    
-#     rmses = [metrics1[0], metrics2[0], metrics3[0]]
-#     maxes = [metrics1[1], metrics2[1], metrics3[1]]
-#     correlations = [metrics1[2], metrics2[2], metrics3[2]], [metrics1[3], metrics2[3], metrics3[3]]
-    
-#     return resultados_eval, rmses, maxes, correlations, , , , 

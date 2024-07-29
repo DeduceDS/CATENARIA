@@ -5,12 +5,13 @@ import time
 
 from scipy.stats import pearsonr, spearmanr
 from scipy.optimize import curve_fit
-
 from sklearn.metrics import root_mean_squared_error as rmse
 from sklearn.metrics import mean_absolute_error as ma
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import SpectralClustering
 from sklearn.decomposition import PCA
+
+from electra_package.modules_preprocess import *
 
 
 def catenaria(x, a, h, k):
@@ -260,3 +261,16 @@ def fit_3D_coordinates_2(y_values, z_values, fit_function, initial_params):
     RMSE_z, max_z, pearson_z, spearman_z = get_metrics(fitted_z_vals_scaled, z_vals_scaled)
     
     return y_pol, fitted_z_pol, parametros, [RMSE_z, max_z, pearson_z, spearman_z]
+
+
+def stack_unrotate_fits(pols, mat):
+
+    fit1=np.vstack((pols[0][0], pols[1][0], pols[2][0]))
+    fit2=np.vstack((pols[0][1], pols[1][1], pols[2][1]))
+    fit3=np.vstack((pols[0][2], pols[1][2], pols[2][2]))
+
+    mat_neg,fit1=un_rotate_points(fit1,mat)
+    mat_neg,fit2=un_rotate_points(fit2,mat)
+    mat_neg,fit3=un_rotate_points(fit3,mat)
+    
+    return fit1, fit2, fit3

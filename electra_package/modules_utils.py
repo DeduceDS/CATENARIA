@@ -2,10 +2,12 @@
 import math
 import matplotlib.pyplot as plt
 import re
-
+import sys
 from electra_package.puntuacion import *
 from electra_package.modules_clustering import *
 from loguru import logger
+
+
 #### FUNCTIONS TO PROCESS JSON DATA ####
 
 def print_element(element):
@@ -45,6 +47,20 @@ def print_element(element):
 
         else:
             print(f"\n{key}: {element[key]}")
+            
+            
+def set_logger(level):
+    
+    logger.remove() # remove the default logger
+    # Adding new levels: Critical = Text with Purple Background, Title: Light 
+    logger.level("CRITICAL", color = "<bold><bg #AF5FD7>")
+    try:
+        logger.level("TITLE")
+    except ValueError:
+        logger.level("TITLE", color="<bold><fg 86>", no=21)
+    logger.add(sys.stdout, format = "<lvl>{message}</lvl>", colorize=True, backtrace=True, diagnose=True, level=level)  
+    logger.info(f"Setting logger")
+    
 
 def get_coord(points):
     """
