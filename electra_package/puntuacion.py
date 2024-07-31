@@ -1,7 +1,7 @@
 
 import numpy as np
 import pandas as pd
-
+from loguru import logger
 from sklearn.cluster import SpectralClustering
 from sklearn.decomposition import PCA
 from sklearn.metrics import mean_squared_error
@@ -94,13 +94,14 @@ def rmse(x, y):
     """
     RMSE entre las polilíneas y los puntos LIDAR
     """
-    if len(x) >= len(y):
-        intervalo = len(x) // (len(y)-1)
-        nn = [x[i * intervalo] for i in range(len(y)-1)] + [x[-1]]
+    
+    if x.shape[0] >= y.shape[0]:
+        intervalo = x.shape[0] // (y.shape[0]-1)
+        nn = [x[i * intervalo] for i in range(y.shape[0]-1)] + [x[-1]]
         return np.sqrt(mean_squared_error(nn, y))
     else:
-        intervalo = len(y) // (len(x)-1)
-        nn = [y[i * intervalo] for i in range(len(x)-1)] + [y[-1]]
+        intervalo = y.shape[0] // (x.shape[0]-1)
+        nn = [y[i * intervalo] for i in range(x.shape[0]-1)] + [y[-1]]
         return np.sqrt(mean_squared_error(nn, x))
     
 def num_apoyos_LIDAR(data, vano):
@@ -357,6 +358,7 @@ def ajuste(data, vano):
 
 def evaluar_ajuste(x_pols, y_pols, rotated_vertices, longitud_vano, clusters):
     
+    # logger.info(f"{len(clusters), clusters}")
     y1, z1 = clusters[0][1,:], clusters[0][2,:]
     y2, z2 = clusters[1][1,:], clusters[1][2,:]
     y3, z3 = clusters[2][1,:], clusters[2][2,:]
@@ -428,14 +430,14 @@ def evaluar_ajuste(x_pols, y_pols, rotated_vertices, longitud_vano, clusters):
 
     return (long_pol1, long_pol2, long_pol3, error_suya, error_nuestra, p_huecos)
     
-def rmse_suya_2(data, vano):
+def rmse_suya_2(vano):
     """
     RMSE y huecos intermedios de los datos
     """
-    puntos_conductores = data[vano]['LIDAR']['CONDUCTORES']
-    puntos_vertices = data[vano]['CONDUCTORES'][0]['VERTICES']
-    puntos_vertices2 = data[vano]['CONDUCTORES'][1]['VERTICES']
-    puntos_extremos = data[vano]['APOYOS']
+    puntos_conductores = vano['LIDAR']['CONDUCTORES']
+    puntos_vertices = vano['CONDUCTORES'][0]['VERTICES']
+    puntos_vertices2 = vano['CONDUCTORES'][1]['VERTICES']
+    puntos_extremos = vano['APOYOS']
 
     x_vals_conductores, y_vals_conductores, z_vals_conductores = get_coord(puntos_conductores)
     x_vals_extremos, y_vals_extremos, z_vals_extremos = get_coord2(puntos_extremos)
@@ -525,7 +527,7 @@ def rmse_suya_2(data, vano):
     huecos1 = np.where(distancias1y > 5)
     huecos2 = np.where(distancias2y > 5)
 
-    longitud = data[vano]['LONGITUD_2D']
+    longitud = vano['LONGITUD_2D']
     p_huecos_1 = 0
     for i in range(len(huecos1[0])):
         p_huecos_1 = p_huecos_1 + (distancias1y[huecos1[0][i]]/longitud)*100
@@ -537,15 +539,15 @@ def rmse_suya_2(data, vano):
 
     return error_suya, p_huecos
 
-def rmse_suya_1(data, vano):
+def rmse_suya_1(vano):
     """
     RMSE y huecos intermedios de los datos
     """
-    puntos_conductores = data[vano]['LIDAR']['CONDUCTORES']
-    puntos_vertices = data[vano]['CONDUCTORES'][0]['VERTICES']
-    puntos_vertices2 = data[vano]['CONDUCTORES'][1]['VERTICES']
-    puntos_vertices3 = data[vano]['CONDUCTORES'][2]['VERTICES']
-    puntos_extremos = data[vano]['APOYOS']
+    puntos_conductores = vano['LIDAR']['CONDUCTORES']
+    puntos_vertices = vano['CONDUCTORES'][0]['VERTICES']
+    puntos_vertices2 = vano['CONDUCTORES'][1]['VERTICES']
+    puntos_vertices3 = vano['CONDUCTORES'][2]['VERTICES']
+    puntos_extremos = vano['APOYOS']
 
     x_vals_conductores, y_vals_conductores, z_vals_conductores = get_coord(puntos_conductores)
     x_vals_extremos, y_vals_extremos, z_vals_extremos = get_coord2(puntos_extremos)
@@ -606,7 +608,7 @@ def rmse_suya_1(data, vano):
 
     huecos = np.where(distanciasy > 5)
 
-    longitud = data[vano]['LONGITUD_2D']
+    longitud = vano['LONGITUD_2D']
 
     p_huecos = 0
 
@@ -697,7 +699,8 @@ def puntuación_por_vanos(data, id_vano):
 def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
     # with open(pathdata, 'r') as archivo:
     #     data = json.load(archivo)
-
+    
+    logger.success(f"Setting vano score with old puntuation function")    
     clasificacion1 = {
         'Vano': [],
         'Reconstrucción': [],
@@ -705,6 +708,8 @@ def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
         'Error polilínea': [],
         'Error nuestro ajuste': [],
     }
+    
+    
     for iel, el in enumerate(data):
         if id_vano == el['ID_VANO']:
             num_el = el
@@ -717,10 +722,11 @@ def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
     len_conductores = len(conductores)
     clasificacion1['Vano'].append(num_el['ID_VANO'])
     longitud = num_el['LONGITUD_2D']
+    
     if len_apoyos == 2:
         if len_conductores >= 3:
             
-            resultados_evaluacion = evaluaciones[id_vano]
+            resultados_evaluacion = evaluaciones
             
             clasificacion1['Reconstrucción'].append("Posible")
             
@@ -768,7 +774,7 @@ def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
             clasificacion1['Error nuestro ajuste'].append(0)
     else:
         clasificacion1['Reconstrucción'].append("No posible")
-        apoyos_LIDAR = num_apoyos_LIDAR(data, num_iel)
+        apoyos_LIDAR = 2
         clasificacion1['Error polilínea'].append(0)
         clasificacion1['Error nuestro ajuste'].append(0)
         if apoyos_LIDAR == 2:
@@ -777,3 +783,79 @@ def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
             clasificacion1['Flag'].append('No tiene 2 apoyos cartografiados ni 2 apoyos LIDAR.')
     clasificacion1 = pd.DataFrame(clasificacion1)
     return(clasificacion1)
+
+
+def puntuación_por_vano(vano, evaluaciones):
+
+    logger.success(f"Setting vano score with old puntuation function")    
+    clasificacion1 = {
+        'Vano': [],
+        'Reconstrucción': [],
+        'Flag': [],
+        'Error polilínea': [],
+        'Error nuestro ajuste': [],
+    }
+    
+    id_vano = vano['ID_VANO']
+    longitud = vano['LONGITUD_2D']
+    len_conductores = vano["line_number"]
+    
+    clasificacion1['Vano'].append(id_vano)
+
+    if len_conductores == 3:
+        
+        resultados_evaluacion = evaluaciones
+        
+        clasificacion1['Reconstrucción'].append("Posible")
+        long_pol1, long_pol2, long_pol3 = resultados_evaluacion[0], resultados_evaluacion[1], resultados_evaluacion[2]
+        error_suya, error_nuestra = resultados_evaluacion[3], resultados_evaluacion[4]
+        p_huecos_intermedios = resultados_evaluacion[5]
+        
+        p_hueco_1 = ((longitud - long_pol1)/longitud)*100
+        p_hueco_2 = ((longitud - long_pol2)/longitud)*100
+        p_hueco_3 = ((longitud - long_pol3)/longitud)*100
+        p_hueco = (p_hueco_1 + p_hueco_2 + p_hueco_3) / 3
+        p_hueco = (p_hueco + p_huecos_intermedios) / 2
+        p_hueco = p_hueco[0]
+        
+        clasificacion1['Flag'].append(f"Tiene 3 conductores. Porcentaje de huecos: {p_hueco:.2f}%")
+        clasificacion1['Error polilínea'].append(error_suya)
+        clasificacion1['Error nuestro ajuste'].append(error_nuestra-error_nuestra*p_hueco/100)
+        
+    # elif len_conductores == 2:
+        
+    #     clasificacion1['Reconstrucción'].append("No posible")
+    #     x1, y1, z1 = get_coord(conductores[0]['VERTICES'])
+    #     x2, y2, z2 = get_coord(conductores[1]['VERTICES'])
+    #     long_pol1 = np.sqrt((x1[0]-x1[-1])**2 + (y1[0]-y1[-1])**2)
+    #     long_pol2 = np.sqrt((x2[0]-x2[-1])**2 + (y2[0]-y2[-1])**2)
+    #     p_hueco_1 = ((longitud - long_pol1)/longitud)*100
+    #     p_hueco_2 = ((longitud - long_pol2)/longitud)*100
+    #     p_hueco = (p_hueco_1 + p_hueco_2) / 2
+        
+    #     error_suya, p_huecos_intermedios = rmse_suya_2(vano)
+        
+    #     p_hueco = (p_hueco + p_huecos_intermedios) / 2
+    #     clasificacion1['Flag'].append(f"Tiene 2 conductores. Porcentaje de huecos: {p_hueco:.2f}%")
+    #     clasificacion1['Error polilínea'].append(error_suya)
+    #     clasificacion1['Error nuestro ajuste'].append(0)
+        
+    # elif len_conductores == 1:
+    #     clasificacion1['Reconstrucción'].append("No posible")
+    #     x1, y1, z1 = get_coord(conductores[0]['VERTICES'])
+    #     long_pol1 = np.sqrt((x1[0]-x1[-1])**2 + (y1[0]-y1[-1])**2)
+    #     p_hueco_1 = ((longitud - long_pol1)/longitud)*100
+    #     error_suya, p_huecos_intermedios = rmse_suya_1(vano)
+    #     p_hueco_1 = (p_hueco_1 + p_huecos_intermedios) / 2
+    #     clasificacion1['Flag'].append(f"Tiene 1 conductor. Porcentaje de huecos: {p_hueco_1:.2f}%")
+    #     clasificacion1['Error polilínea'].append(error_suya)
+    #     clasificacion1['Error nuestro ajuste'].append(0)
+    else:
+        clasificacion1['Reconstrucción'].append("No posible")
+        clasificacion1['Flag'].append('No tiene conductores')
+        clasificacion1['Error polilínea'].append(0)
+        clasificacion1['Error nuestro ajuste'].append(0)
+        
+    clasificacion1 = pd.DataFrame(clasificacion1)
+    return(clasificacion1)
+

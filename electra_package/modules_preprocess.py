@@ -12,6 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from electra_package.puntuacion import *
 from electra_package.modules_utils import *
 from electra_package.modules_clustering import *
+from electra_package.modules_plots import *
 
 def get_bad_data(pathdata):
     
@@ -143,6 +144,52 @@ def mod_extremos(data,new_extremos,ids):
 
 #### FUNCTIONS TO TRANSFORM/PREPROCESS 3D POINTS ####
 
+def random_sampling(point_cloud, num_points):
+    logger.debug(f"random sampling for: {num_points}")
+    if point_cloud.shape[1] <= num_points:
+        return point_cloud
+    indices = np.random.choice(int(point_cloud.shape[1]), int(num_points), replace=False)
+    return point_cloud[:, indices]
+
+    
+def voxel_grid_downsampling_with_centroids(point_cloud, voxel_size):
+    """
+    Perform voxel grid downsampling on 3D points, using the centroid of points within each voxel.
+
+    Args:
+        point_cloud (numpy.ndarray): Input points of shape (3, N).
+        voxel_size (float): Size of the voxel.
+
+    Returns:
+        numpy.ndarray: Downsampled points of shape (3, M).
+    """
+    logger.trace(f"voxel grid downsampling for: {voxel_size}")
+    xyz_min = np.min(point_cloud, axis=1, keepdims=True)
+    grid = np.floor((point_cloud - xyz_min) / voxel_size).astype(int)
+    
+    voxel_dict = {}
+    for i, g in enumerate(grid.T):
+        key = tuple(g)
+        if key not in voxel_dict:
+            voxel_dict[key] = []
+        voxel_dict[key].append(point_cloud[:, i])
+    
+    downsampled_points = []
+    for voxel_points in voxel_dict.values():
+        centroid = np.mean(voxel_points, axis=0)
+        downsampled_points.append(centroid)
+    
+    downsampled_points = np.array(downsampled_points).T
+    
+    return downsampled_points
+
+def down_sample_lidar(apoyo_values, cond_values):
+    
+    apoyo_values = voxel_grid_downsampling_with_centroids(apoyo_values, 0.25)
+    cond_values = voxel_grid_downsampling_with_centroids(cond_values, 0.25)
+    
+    return apoyo_values, cond_values
+
 def pretreatment_linegroup(parameters):
     """
     Preprocess and clean the parameters data for line groups.
@@ -269,6 +316,7 @@ def rotate_vano(cond_values, extremos_values, apoyo_values, vert_values):
     tuple: Rotated coordinates for conductors, supports, vertices, and endpoints.
     """
     
+    logger.info(f"Rotating vano")
     # Rotate and compare
     mat, rotated_conds = rotate_points(cond_values, extremos_values)
 
@@ -303,26 +351,43 @@ def clean_outliers(rotated_conds, rotated_extremos):
     - The function assumes that the input arrays are properly rotated and aligned.
     """
     
-    # print(f"Shape 0: {np.array(rotated_extremos).shape}")
-    
-    #Get left and right extreme values
-    left = np.max([rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
-    right = np.min([rotated_extremos.T[0][1],rotated_extremos.T[1][1]])
+    logger.info(f"Cropping conductor with backings")
 
-    # print(right-left)
-    # print(rotated_extremos)
+    #Get left and right extreme values
+    # left = np.max([rotated_extremos.T[0][1], rotated_extremos.T[1][1], rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
+    # right = np.min([rotated_extremos.T[0][1], rotated_extremos.T[1][1], rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
     
+    # left = np.max([rotated_extremos.T[2][1],rotated_extremos.T[3][1]])
+    # right = np.min([rotated_extremos.T[0][1],rotated_extremos.T[1][1]])
+
+    # top = np.max([rotated_extremos.T[0][2], rotated_extremos.T[1][2], rotated_extremos.T[2][2],rotated_extremos.T[3][2]])
+    # bottom = np.min([rotated_extremos.T[0][2], rotated_extremos.T[1][2], rotated_extremos.T[2][2],rotated_extremos.T[3][2]])
+    
+    top = np.max(rotated_extremos, axis = 1)[2]
+    bottom = np.min(rotated_extremos, axis = 1)[2]
+    
+    left = np.min(rotated_extremos, axis = 1)[1]
+    right = np.max(rotated_extremos, axis = 1)[1]
+    
+    # print(top, bottom, np.max(rotated_conds, axis = 1)[2], np.min(rotated_conds, axis = 1)[2])
+    # print(left, right, np.max(rotated_conds, axis = 1)[1], np.min(rotated_conds, axis = 1)[1])
+
     # Filter points within the specified boundaries
     cropped_conds = rotated_conds[:, (right > rotated_conds[1,:]) & (rotated_conds[1,:] > left)]
+    cropped_conds = cropped_conds[:, (top > cropped_conds[2,:]) & (cropped_conds[2,:] > bottom)]
     
-    # print(f"Shape 1: {cropped_conds.shape}")
+    # print(top, np.max(cropped_conds[2,:]))
+
+    # Filter points within the specified boundaries
+    
+    logger.trace(f"Shape 1: {cropped_conds.shape}")
 
     # Paso 1: Calcular el histograma de las coordenadas Y
     hist, bin_edges = np.histogram(cropped_conds[1, :], bins=200)
 
     # Paso 2: Identificar los picos significativos en ambos extremos del histograma
     # Definir un umbral para considerar un pico significativo
-    threshold_density = np.mean(hist) + 2 * np.std(hist)
+    threshold_density = np.mean(hist) + 3*np.std(hist)
 
     # Encontrar el bin con la mayor cantidad de puntos en la parte superior
     peak_bin_upper = np.argmax(hist[:len(hist)//2])
@@ -350,21 +415,27 @@ def clean_outliers(rotated_conds, rotated_extremos):
     if threshold_y_lower is not None:
         cropped_conds = cropped_conds[:, cropped_conds[1, :] < threshold_y_lower]
         
-    # print(f"Shape 2: {cropped_conds.shape}")
+    print(f"Shape 2: {cropped_conds.shape}")
     
-    # Calcular percentiles 1 y 99
-    p1 = np.percentile(cropped_conds[1, :], 2)
-    p99 = np.percentile(cropped_conds[1, :], 98)
+    # # Calcular percentiles 1 y 99
+    # p1 = np.percentile(cropped_conds[1, :], 2)
+    # p99 = np.percentile(cropped_conds[1, :], 98)
 
-    # Filtrar los datos para eliminar el 5% de los puntos con menor y mayor coordenada Y
-    cropped_conds = cropped_conds[:,(cropped_conds[1, :] > p1) & (cropped_conds[1, :] < p99)]
+    # # Filtrar los datos para eliminar el 5% de los puntos con menor y mayor coordenada Y
+    # cropped_conds = cropped_conds[:,(cropped_conds[1, :] > p1) & (cropped_conds[1, :] < p99)]
 
     # Erase X axis outliers
-    p1 = np.percentile(cropped_conds[0, :], 2)
-    p99 = np.percentile(cropped_conds[0, :], 98)
+    # p1 = np.percentile(cropped_conds[0, :], 2)
+    # p99 = np.percentile(cropped_conds[0, :], 98)
 
-    cropped_conds = cropped_conds[:,(cropped_conds[0, :] > p1) & (cropped_conds[0, :] < p99)]
+    # cropped_conds = cropped_conds[:,(cropped_conds[0, :] > p1) & (cropped_conds[0, :] < p99)]
+    
+    #     # Erase Z axis outliers
+    # p1 = np.percentile(cropped_conds[2, :], 2)
+    # p99 = np.percentile(cropped_conds[2, :], 98)
 
+    # cropped_conds = cropped_conds[:,(cropped_conds[2, :] > p1) & (cropped_conds[2, :] < p99)]
+    
     return cropped_conds
 
 def clean_outliers_2(rotated_conds):
@@ -378,12 +449,13 @@ def clean_outliers_2(rotated_conds):
     numpy.ndarray: The cleaned conductor points with outliers removed based on IQR.
     """
 
-    lx=pd.Series(rotated_conds[0,:]).quantile(0.25)
-    ux=pd.Series(rotated_conds[0,:]).quantile(0.75)
-    ly=pd.Series(rotated_conds[1,:]).quantile(0.25)
-    uy=pd.Series(rotated_conds[1,:]).quantile(0.75)
-    lz=pd.Series(rotated_conds[2,:]).quantile(0.25)
-    uz=pd.Series(rotated_conds[2,:]).quantile(0.75)
+    logger.trace("Cleaning outliers with IQR")
+    lx=pd.Series(rotated_conds[0,:]).quantile(0.20)
+    ux=pd.Series(rotated_conds[0,:]).quantile(0.80)
+    ly=pd.Series(rotated_conds[1,:]).quantile(0.20)
+    uy=pd.Series(rotated_conds[1,:]).quantile(0.80)
+    lz=pd.Series(rotated_conds[2,:]).quantile(0.20)
+    uz=pd.Series(rotated_conds[2,:]).quantile(0.80)
     rotated_conds=rotated_conds[:,(rotated_conds[0,:]>lx-1.5*(ux-lx))&(rotated_conds[0,:]<ux+1.5*(ux-lx))]
     rotated_conds=rotated_conds[:,(rotated_conds[1,:]>ly-1.5*(uy-ly))&(rotated_conds[1,:]<uy+1.5*(uy-ly))]
     rotated_conds=rotated_conds[:,(rotated_conds[2,:]>lz-1.5*(uz-lz))&(rotated_conds[2,:]<uz+1.5*(uz-lz))]
@@ -407,7 +479,7 @@ def clean_outliers_3(cropped_conds):
     """
     
     nn = 4 # Local search
-    std_multip = 2 # Not very sensitive
+    std_multip = 1.5 # Not very sensitive
 
     pcd_o3d = o3d.geometry.PointCloud()
     pcd_o3d.points = o3d.utility.Vector3dVector(np.array(cropped_conds).T)
@@ -441,6 +513,11 @@ def clean_outliers_4(cropped_conds):
 
 #### SCALE FUNCTIONS ####
 
+def scale_vertices(rotated_vertices, scaler_x, scaler_y, scaler_z):
+    
+    scaled_vertices = [np.array([scaler_x.fit_transform(vert[0,:].reshape(-1, 1)), scaler_y.fit_transform(vert[1,:].reshape(-1, 1)), scaler_z.fit_transform(vert[2,:].reshape(-1, 1))]) for vert in rotated_vertices]
+    return scaled_vertices
+
 def scale_conductor(X):
     """
     Scale the x, y, and z coordinates of the conductor points using standard scaling.
@@ -451,7 +528,8 @@ def scale_conductor(X):
     Returns:
     numpy.ndarray: The scaled x, y, and z coordinates.
     """
-
+    
+    logger.info(f"Scaling conductor")
     # Normalizzazione dei valori di x e y
     scaler_y = StandardScaler()
     scaler_x = StandardScaler()
@@ -543,7 +621,7 @@ def data_middlepoints(data):
 
     return ids_bad_backing,X
 
-def define_backings(vano_length, apoyo_values):
+def define_backings(vano_length, apoyo_values, coord):
     """
     Define the backings (extremos) based on the length of the span and the coordinates of the supports.
 
@@ -561,23 +639,22 @@ def define_backings(vano_length, apoyo_values):
         for each support. If the distance between centroids deviates significantly from the span length,
         returns -1.
     """
-                    
-    invertedxy = np.zeros((np.array(apoyo_values).shape))
-    invertedxy[1,:] = (np.array(apoyo_values))[0,:]
-    invertedxy[0,:] = (np.array(apoyo_values))[1,:]
-    invertedxy[2,:] = (np.array(apoyo_values))[2,:]
     
-    labels, centroids = kmeans_clustering(invertedxy, 2, 100)
-
+    logger.warning(f"Redefining backings")
+    
+    points = np.array(apoyo_values)
+    
+    labels, centroids = kmeans_clustering(points, 2, 100, coord)
+            
     apoyos = []
     extremos = []
-    
+
     for lab in np.unique(labels):
 
         apoyo = np.array(apoyo_values)[:, labels == lab]
 
-        mean_x = np.mean(apoyo[1,:])
-        mean_y = np.mean(apoyo[0,:])
+        mean_x = np.mean(apoyo[0,:])
+        mean_y = np.mean(apoyo[1,:])
         max_z = np.max(apoyo[2,:])
         min_z = np.min(apoyo[2,:])
         
@@ -589,17 +666,23 @@ def define_backings(vano_length, apoyo_values):
         
         apoyos.append(apoyo)
 
-    dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
+    
+    dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
     extremos = np.array(extremos)
-
-    logger.debug(f"Distance between mean points: {dist}")
-
-    if 100*abs(dist - vano_length)/vano_length > 10.0: # data[i]["LONGITUD_2D"]
+    
+    if 100*abs(dist - vano_length)/vano_length > 20.0:
+    
+        logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
+        logger.trace(f"Vano length, distance {vano_length, dist}")
+        logger.trace(f"Invertir coordenadas")
         
-        points = np.array(apoyo_values)
-        
-        labels, centroids = kmeans_clustering(points, 2, 100)
+        if coord == 0:
+            coord = 1
+        else:
+            coord = 0
             
+        labels, centroids = kmeans_clustering(points, 2, 100, coord)
+                
         apoyos = []
         extremos = []
 
@@ -619,28 +702,38 @@ def define_backings(vano_length, apoyo_values):
             extremos.append(c_mass2)
             
             apoyos.append(apoyo)
-        
-
-        logger.debug(f"Invertir coordenadas")
-        
+            
         dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
         extremos = np.array(extremos)
-        
-        if 100*abs(dist - vano_length)/vano_length > 10.0:
 
-            logger.debug(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
-            logger.debug("SOLO HAY 1 APOYO")
+        if 100*abs(dist - vano_length)/vano_length > 20.0:
+
+            logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
+            logger.trace(f"Vano length, distance {vano_length, dist}")
+            logger.warning("SOLO HAY 1 APOYO")
             
-            # plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
-            # plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
-            # plt.title('Custom 1D K-means Clustering')
+            if coord == 0:
+                coord1, coord2 = 1, 2
+            else:
+                coord1, coord2 = 0, 2
+            
+            # plt.figure(figsize=(12,8))
+            # plt.subplot(121)
+            # plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
+            # plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
             # plt.xlabel('X Coordinate')
             # plt.ylabel('Y Coordinate')
+            # plt.subplot(122)
+            # plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
+            # plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
+            # plt.xlabel('X Coordinate')
+            # plt.ylabel('Z Coordinate')
+            # plt.title(f'Custom 1D K-means Clustering for coord {coord}')
+        
             # plt.show()
             
             return -1
-
-    print(extremos.shape)
+                        
     # z_vals = np.stack([np.array(extremos)[0,2], np.array(extremos)[1,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
     z_vals = np.stack([np.array(extremos)[2,2], np.array(extremos)[3,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
     y_vals =  np.stack([np.array(extremos)[2,1], np.array(extremos)[3,1], np.array(extremos)[0,1], np.array(extremos)[1,1]])
