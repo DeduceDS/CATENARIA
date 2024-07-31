@@ -1,11 +1,10 @@
+import numpy as np
+
 from sklearn.neighbors import NearestNeighbors
 from sklearn.neighbors import kneighbors_graph
-from statistics import mode
 from sklearn import metrics
 from sklearn.cluster import SpectralClustering
-import numpy as np
 from sklearn.cluster import DBSCAN
-
 
 #### FUNCTIONS FOR CLUSTERING ####
 
