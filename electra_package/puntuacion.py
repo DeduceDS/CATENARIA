@@ -785,28 +785,17 @@ def puntuación_por_vanos_sin_ajuste(data, id_vano, evaluaciones):
     return(clasificacion1)
 
 
-def puntuación_por_vano(vano, evaluaciones):
+def puntuación_por_vano(response_vano, evaluaciones, longitud):
 
     logger.success(f"Setting vano score with old puntuation function")    
-    clasificacion1 = {
-        'Vano': [],
-        'Reconstrucción': [],
-        'Flag': [],
-        'Error polilínea': [],
-        'Error nuestro ajuste': [],
-    }
     
-    id_vano = vano['ID_VANO']
-    longitud = vano['LONGITUD_2D']
-    len_conductores = vano["line_number"]
-    
-    clasificacion1['Vano'].append(id_vano)
+    # longitud = response_vano['LONGITUD_2D']
+    len_conductores = response_vano["line_number"]
 
     if len_conductores == 3:
         
         resultados_evaluacion = evaluaciones
         
-        clasificacion1['Reconstrucción'].append("Posible")
         long_pol1, long_pol2, long_pol3 = resultados_evaluacion[0], resultados_evaluacion[1], resultados_evaluacion[2]
         error_suya, error_nuestra = resultados_evaluacion[3], resultados_evaluacion[4]
         p_huecos_intermedios = resultados_evaluacion[5]
@@ -818,9 +807,10 @@ def puntuación_por_vano(vano, evaluaciones):
         p_hueco = (p_hueco + p_huecos_intermedios) / 2
         p_hueco = p_hueco[0]
         
-        clasificacion1['Flag'].append(f"Tiene 3 conductores. Porcentaje de huecos: {p_hueco:.2f}%")
-        clasificacion1['Error polilínea'].append(error_suya)
-        clasificacion1['Error nuestro ajuste'].append(error_nuestra-error_nuestra*p_hueco/100)
+        response_vano["reconstruccion"] = "Posible"
+        response_vano["huecos"] = f"{p_hueco:.2f}%"
+        response_vano["Error_polilinea"] = error_suya
+        response_vano["Error_catenaria"] = error_nuestra-error_nuestra*p_hueco/100
         
     # elif len_conductores == 2:
         
@@ -851,11 +841,11 @@ def puntuación_por_vano(vano, evaluaciones):
     #     clasificacion1['Error polilínea'].append(error_suya)
     #     clasificacion1['Error nuestro ajuste'].append(0)
     else:
-        clasificacion1['Reconstrucción'].append("No posible")
-        clasificacion1['Flag'].append('No tiene conductores')
-        clasificacion1['Error polilínea'].append(0)
-        clasificacion1['Error nuestro ajuste'].append(0)
         
-    clasificacion1 = pd.DataFrame(clasificacion1)
-    return(clasificacion1)
+        response_vano["reconstruccion"] = "No posible (n_cond != 3)"
+        response_vano["huecos"] = "0 %"
+        response_vano["Error_polilinea"] = 0
+        response_vano["Error_catenaria"] = 0
+
+    return response_vano
 

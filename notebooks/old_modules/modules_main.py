@@ -521,8 +521,8 @@ def fit_plot_vano_group_2(data,sublist=[],plot_filter=None,init=0,end=None,save=
                 
                 del data[i]["LIDAR"]
                 
-                end_time7 = time.time()
-                logger.debug(f"Eigth time {end_time7-end_time6}")
+                # end_time7 = time.time()
+                # logger.debug(f"Eigth time {end_time7-end_time6}")
                 
     return data, rmses, maxes, correlations
 

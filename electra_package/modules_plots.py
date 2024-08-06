@@ -2,7 +2,7 @@
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
 from electra_package.modules_preprocess import *
-from electra_package.modules_main import *
+# from notebooks.old_modules.modules_main import *
 import numpy as np
 
 #### FUNCTIONS TO PLOT DATA AND FITS ####

@@ -35,7 +35,7 @@ from sklearn.decomposition import PCA
 import statsmodels.api as sm
 from sklearn.linear_model import LinearRegression
 from sklearn.cluster import SpectralClustering
-from catenaria.deliverable.puntuacion import *
+from deliverable.puntuacion import *
 
 
 def print_element(element):

@@ -84,37 +84,26 @@ def stack_unrotate_fits(pols, mat):
     
     return fit1, fit2, fit3
 
-def puntuate_and_save(vano, fit1, fit2, fit3, params, evaluaciones):
+def puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, vano_length):
     
     logger.success(f"Saving results")
     
     if evaluaciones == (0, 0, 0, 0, 0, 0):
-        vano['flag'] = 'no_vertices'
+        response_vano['flag'] = 'no_vertices'
         
     else:
-        vano["flag"] = "good_fit"
+        response_vano["flag"] = "good_fit"
         
-    vano['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
-    vano['CONDUCTORES_CORREGIDOS'][str(1)]=fit2.T.tolist()
-    vano['CONDUCTORES_CORREGIDOS'][str(2)]=fit3.T.tolist()
-    vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(0)]=params[0]
-    vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(1)]=params[1]
-    vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(2)]=params[2]
+    response_vano['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
+    response_vano['CONDUCTORES_CORREGIDOS'][str(1)]=fit2.T.tolist()
+    response_vano['CONDUCTORES_CORREGIDOS'][str(2)]=fit3.T.tolist()
+    response_vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(0)]=params[0]
+    response_vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(1)]=params[1]
+    response_vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(2)]=params[2]
     
-    puntuacion=puntuación_por_vano(vano, evaluaciones).to_json()
-    puntuacion_dict = json.loads(puntuacion)
-    
-    for n in puntuacion_dict:
-        puntuacion_dict[n]=puntuacion_dict[n]["0"]
-        
-    del puntuacion_dict['Vano']
-    
-    # puntuacion_dict['Continuidad']=finc[0]
-    puntuacion_dict['Conductores identificados']=vano['line_number']
-    puntuacion_dict['Output']=vano['flag']
-    vano['PUNTUACIONES']=puntuacion_dict
+    response_vano=puntuación_por_vano(response_vano, evaluaciones, vano_length)
                         
-    return vano
+    return response_vano
 
 def process_vano(vano):
     
@@ -125,18 +114,32 @@ def process_vano(vano):
         idv, vano_length, cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(vano)
         
         del vano["LIDAR"]
+        # del vano["OBJECTID_VANO_2D"]
+        # del vano["COORDENADA_X_INICIO"]
+        # del vano["COORDENADA_Y_INICIO"]
+        # del vano["COORDENADA_X_FIN"]
+        # del vano["COORDEANDA_Y_FIN"]
+        # del vano["COORDENADA_X_FIN"]
+
         
         logger.critical(f"\nReference {idv}")
         
         # Create new attributes for data element (dictionary)
-        vano['CONDUCTORES_CORREGIDOS']={}
-        vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)']={}
-        vano['PUNTUACIONES']={}
-        vano['flag'] = 'None'
-        vano['line_number'] = 0
-        vano["config"] = "None"
-        vano["completeness"] = "None"
-        
+        response_vano = {}
+        response_vano["ID_VANO"] = idv
+        response_vano['CONDUCTORES_CORREGIDOS']={}
+        response_vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)']={}
+        response_vano['PUNTUACIONES']={}
+        response_vano['flag'] = 'None'
+        response_vano['line_number'] = 0
+        response_vano["config"] = "None"
+        response_vano["completeness"] = "None"
+        response_vano["line_confirmation"] = False
+        response_vano["reconstruccion"] = "No posible"
+        response_vano["huecos"] = "0 %"
+        response_vano["Error_polilinea"] = 0
+        response_vano["Error_catenaria"] = 0
+
         # Declare fit evaluation results as 0 tuple and save them as default
         evaluaciones = (0, 0, 0, 0, 0, 0)
 
@@ -156,8 +159,8 @@ def process_vano(vano):
             # Include flag of bad extreme values
             # Set the line value of this element as 0 ****
             logger.error(f"Bad backings")
-            vano['flag'] = 'bad_backings'
-            return vano, -1
+            response_vano['flag'] = 'bad_backings'
+            return response_vano, -1
             
         mat, rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
         
@@ -170,13 +173,13 @@ def process_vano(vano):
 
         scaled_vertices = scale_vertices(rotated_vertices, scaler_x,scaler_y,scaler_z)
         
-        finc, md = extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos, rotated_conds)
+        num_empty, finc, md = extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos, rotated_conds)
         config, max_var = analyze_conductor_configuration(X_scaled)
         
-        vano["config"] = config
-        vano["completeness"] = finc
-        vano['line_number'] = md
-        
+        response_vano["config"] = config
+        response_vano["completeness"] = finc + str(num_empty)
+        response_vano['line_number'] = md
+                
         if config == 0:
             coord = 0
             
@@ -189,10 +192,10 @@ def process_vano(vano):
             plt.show()
             
             logger.error(f"Bad config")
-            vano['flag'] = "bad_configuration"
+            response_vano['flag'] = "bad_configuration"
             good_clust = False
             
-            return vano, -1
+            return response_vano, -1
         
         max_conds = 4
         good_clust = False
@@ -210,8 +213,9 @@ def process_vano(vano):
                 
                 if n_conds == md:
                     logger.critical(f"Conductor number confirmation for {md} lines")
-                    vano['line_number'] = str(md)+" confirmed"
-                    
+                    response_vano['line_number'] = int(md)
+                    response_vano["line_confirmation"] = True
+                                        
                 if n_conds != 3:
                     good_clust = False 
                 break
@@ -238,7 +242,8 @@ def process_vano(vano):
                     
                     if n_conds == md:
                         logger.critical(f"Conductor number confirmation for {md} lines")
-                        vano['line_number'] = str(md)+" confirmed"
+                        response_vano['line_number'] = int(md)
+                        response_vano["line_confirmation"] = True
                         
                     if n_conds != 3:
                         good_clust = False 
@@ -251,19 +256,22 @@ def process_vano(vano):
         
             pols, params, evaluaciones, metrics = fit_and_evaluate_conds(clusters, scaled_vertices, vano_length)
             
+            pols = unscale_fits(pols, scaler_x, scaler_y, scaler_z)
             fit1, fit2, fit3 = stack_unrotate_fits(pols, mat)
             
-            vano = puntuate_and_save(vano, fit1, fit2, fit3, params, evaluaciones)
+            response_vano = puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, vano_length)
             
-            return vano, metrics
+            logger.critical(f"{np.array(pols[0]).mean(), np.array(pols[1]).mean(), np.array(pols[2]).mean()}")
+            
+            return response_vano, metrics
             
         else:
             
             # plot_data("Bad clustering", cond_values, apoyo_values, vert_values, extremos_values)
             plt.show()
             logger.error(f"Bad clustering, next vano")
-            vano['flag'] = 'bad_cluster'
-            return vano, -1
+            response_vano['flag'] = 'bad_cluster'
+            return response_vano, -1
                 
                 
         # plot_2d(rotated_conds, rotated_extremos, rotated_apoyos)
@@ -289,13 +297,15 @@ def process_vano(vano):
 
 def make_summary(data):
     
-    summary = pd.DataFrame(columns=["ids", "flags", "line_numbers", "configs", "completenesses"])
-
+    summary = pd.DataFrame(columns=["ids","reconstruccion", "flags", "line_numbers", "line_confirmation", "configs", "completenesses", "p_huecos", "Error_polilinea", "Error_catenaria"])
+    
     for vano in data:
         
         try:
-            row = pd.DataFrame({"ids" : vano["ID_VANO"], "flags" : vano["flag"], "line_numbers" : vano["line_number"], "configs" : vano["config"], "completenesses" : vano["completeness"]})
-            
+            row = pd.DataFrame({"ids" : vano["ID_VANO"], "reconstruccion" : vano["reconstruccion"], "flags" : vano["flag"], "line_numbers" : vano["line_number"], 
+                                "line_confirmation": vano["line_confirmation"], "configs" : vano["config"], "completenesses" : vano["completeness"],
+                                "p_huecos": vano["huecos"], "Error_polilinea" : vano["Error_polilinea"], "Error_catenaria" : vano["Error_catenaria"]})
+                
             summary = pd.concat([summary, row])
             
         except Exception as e:
@@ -312,12 +322,12 @@ def main_pipeline(pathdata0, n_vanos):
     
     # pathdata0 = "./data/lineas_completas/XIN803.json"
 
-    bad_ids0 = get_bad_ids(pathdata0.split("json")[0]+"txt")
+    # bad_ids0 = get_bad_ids(pathdata0.split("json")[0]+"txt")
 
     with open(pathdata0, 'r') as archivo:
             data = json.load(archivo)
 
-    print(len(data), bad_ids0)
+    # print(len(data), bad_ids0)
 
     set_logger("INFO")
 
@@ -332,7 +342,7 @@ def main_pipeline(pathdata0, n_vanos):
     # Define a dictionary to store the results of all fit evaluation to extract Puntuaciones
     # evaluaciones = dict()
 
-    logger.error(f"\n NUMBER OF BAD IDS {len(bad_ids0)}")
+    # logger.error(f"\n NUMBER OF BAD IDS {len(bad_ids0)}")
 
     # Loop over data
     for i in range(len(data[:n_vanos])):
@@ -353,33 +363,38 @@ def main_pipeline(pathdata0, n_vanos):
                     bad_cases += 1
                     
     logger.info(f"\nMETRICS: ")
-    logger.success(f"Bad cases vs good cases: {bad_cases}, {good_cases}")
-    logger.success(f"Mean RMSE and mean RmaxSE: {np.array(rmses).mean().mean()}, {np.array(maxes).mean().mean()}")
-    logger.success(f"Mean correlation R Pearson and Spearman: {np.array(correlations)[:,0].mean().mean()}, {np.array(correlations)[:,1].mean().mean()}")
+    if len(rmses) != 0:
+        
+        logger.success(f"Bad cases vs good cases: {bad_cases}, {good_cases}")
+        logger.success(f"Mean RMSE and mean RmaxSE: {np.array(rmses).mean().mean()}, {np.array(maxes).mean().mean()}")
+        logger.success(f"Mean correlation R Pearson and Spearman: {np.array(correlations)[:,0].mean().mean()}, {np.array(correlations)[:,1].mean().mean()}")
+        
+        plt.figure(figsize=(12,8))
 
-    plt.figure(figsize=(12,8))
+        plt.subplot(121)
+        plt.hist(np.array(rmses).flatten())
+        plt.subplot(122)
+        plt.hist(np.array(maxes).flatten())
 
-    plt.subplot(121)
-    plt.hist(np.array(rmses).flatten())
-    plt.subplot(122)
-    plt.hist(np.array(maxes).flatten())
+        plt.title("RMSE and MaxError distribution")
+        plt.tight_layout()
+        plt.show()
 
-    plt.title("RMSE and MaxError distribution")
-    plt.tight_layout()
-    plt.show()
+        plt.figure(figsize=(12,8))
 
-    plt.figure(figsize=(12,8))
+        plt.subplot(121)
+        plt.hist(np.array(correlations)[:,0].flatten())
+        plt.subplot(122)
+        plt.hist(np.array(correlations)[:,1].flatten())
 
-    plt.subplot(121)
-    plt.hist(np.array(correlations)[:,0].flatten())
-    plt.subplot(122)
-    plt.hist(np.array(correlations)[:,1].flatten())
-
-    plt.title("SPEARMAN R and PEARSON R distribution")
-    plt.tight_layout()
-    plt.show()
-    
+        plt.title("SPEARMAN R and PEARSON R distribution")
+        plt.tight_layout()
+        plt.show()
+        
+    else:
+        logger.warning("Empty metrics, no good cases...")
+  
     summary = make_summary(data[:n_vanos])
     logger.success(summary.to_string())
-    
+        
     return data[:n_vanos], summary
