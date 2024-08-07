@@ -6,7 +6,7 @@ from app.application.interfaces import (
 )
 from app.domain.models import ElectraData
 from typing import Dict
-from electra_package.modules_main import fit_plot_vano_group_2
+from electra_package.prerelease_2 import process_vano as fit_plot_vano_group_2
 import numpy as np
 
 
@@ -41,7 +41,7 @@ class ElectraPredictServiceImpl(ElectraPredictService):
                 return obj
 
         # getting required out_data destructuring the returned tuple (data, rmses, maxes, correlations)
-        out_data, *others = fit_plot_vano_group_2(data)
+        out_data, *others = fit_plot_vano_group_2(*data)
 
         result = json_serializable(out_data)
 
