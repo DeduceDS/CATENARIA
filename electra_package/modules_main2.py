@@ -301,7 +301,7 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
     
     logger.trace(f"Third time {end_time2-start_time2}")
 
-    return finc, md
+    return num_empty, finc[0], md
 
 
 def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
@@ -355,35 +355,36 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
     return pols, params, resultados_eval, metrics
 
 
-def puntuate_and_save(vano, fit1, fit2, fit3, params, evaluaciones):
+# def puntuate_and_save(vano, fit1, fit2, fit3, params, evaluaciones):
+
     
-    logger.success(f"Saving results")
+#     logger.success(f"Saving results")
     
-    if evaluaciones == (0, 0, 0, 0, 0, 0):
-        vano['flag'] = 'no_vertices'
+#     if evaluaciones == (0, 0, 0, 0, 0, 0):
+#         vano['flag'] = 'no_vertices'
         
-    else:
-        vano["flag"] = "good_fit"
+#     else:
+#         vano["flag"] = "good_fit"
         
-    vano['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
-    vano['CONDUCTORES_CORREGIDOS'][str(1)]=fit2.T.tolist()
-    vano['CONDUCTORES_CORREGIDOS'][str(2)]=fit3.T.tolist()
-    vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(0)]=params[0]
-    vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(1)]=params[1]
-    vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(2)]=params[2]
+#     vano['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
+#     vano['CONDUCTORES_CORREGIDOS'][str(1)]=fit2.T.tolist()
+#     vano['CONDUCTORES_CORREGIDOS'][str(2)]=fit3.T.tolist()
+#     vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(0)]=params[0]
+#     vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(1)]=params[1]
+#     vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(2)]=params[2]
     
-    puntuacion=puntuación_por_vano(vano, evaluaciones).to_json()
-    puntuacion_dict = json.loads(puntuacion)
+#     puntuacion=puntuación_por_vano(vano, evaluaciones).to_json()
+#     puntuacion_dict = json.loads(puntuacion)
     
-    for n in puntuacion_dict:
-        puntuacion_dict[n]=puntuacion_dict[n]["0"]
+#     for n in puntuacion_dict:
+#         puntuacion_dict[n]=puntuacion_dict[n]["0"]
         
-    del puntuacion_dict['Vano']
+#     del puntuacion_dict['Vano']
     
-    # puntuacion_dict['Continuidad']=finc[0]
-    puntuacion_dict['Conductores identificados']=vano['line_number']
-    puntuacion_dict['Output']=vano['flag']
-    vano['PUNTUACIONES']=puntuacion_dict
+#     # puntuacion_dict['Continuidad']=finc[0]
+#     puntuacion_dict['Conductores identificados']=vano['line_number']
+#     puntuacion_dict['Output']=vano['flag']
+#     vano['PUNTUACIONES']=puntuacion_dict
                         
-    return vano
+#     return vano
 
