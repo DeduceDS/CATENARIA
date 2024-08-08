@@ -19,7 +19,8 @@ app = FastAPI(lifespan=lifespan)
 
 
 app.include_router(vano_router)
-app.include_router(queue_router)
+if settings.QUEUE_FEATURE:
+    app.include_router(queue_router)
 
 
 app.celery_app = celery_app
