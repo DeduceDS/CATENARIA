@@ -817,9 +817,9 @@ def puntuación_por_vano(response_vano, evaluaciones, longitud):
         p_hueco = (p_hueco + p_huecos_intermedios) / 2
         
         response_vano["RECONSTRUCCION"] = "Posible"
-        response_vano["PORCENTAJE_HUECOS"] = p_hueco
+        response_vano["PORCENTAJE_HUECOS"] = p_hueco[0]
         response_vano["ERROR_POLILINEA"] = error_suya
-        response_vano["ERROR_CATENARIA"] = error_nuestra-error_nuestra*p_hueco/100
+        response_vano["ERROR_CATENARIA"] = error_nuestra-error_nuestra*p_hueco[0]/100
         
     # elif len_conductores == 2:
         
