@@ -1,6 +1,7 @@
 # app/domain/models.py
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from app.domain.examples.vano_example import VANO_JSON_EXAMPLE
 
 
 class Apoyo(BaseModel):
@@ -36,6 +37,8 @@ class Vano(BaseModel):
     APOYOS: List[Apoyo]
     CONDUCTORES: List[Conductor]
     LIDAR: Lidar
+
+    model_config = {"json_schema_extra": {"examples": [VANO_JSON_EXAMPLE]}}
 
     def to_dict(self):
         return {
