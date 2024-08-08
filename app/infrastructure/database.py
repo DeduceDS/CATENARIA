@@ -18,7 +18,7 @@ async def get_db():
 # Create tables
 async def init_db():
     async with engine.begin() as conn:
-        if settings.SCHEMA_NAME == "":
-            raise Exception("SCHEMA_NAME is not set")
-        await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {settings.SCHEMA_NAME}"))
+        if settings.DB_SCHEMA == "":
+            raise Exception("DB_SCHEMA is not set")
+        await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {settings.DB_SCHEMA}"))
         await conn.run_sync(Base.metadata.create_all)

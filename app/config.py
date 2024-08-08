@@ -18,9 +18,7 @@ class Settings(BaseSettings):
 
     # Feature flags
     QUEUE_FEATURE: bool = Field(default=False, description="Enable queue feature")
-    ANOTHER_BOOL_FEATURE: bool = Field(
-        default=True, description="Another boolean feature"
-    )
+    DATABASE_FEATURE: bool = Field(default=False, description="Enable database feature")
 
     # Computed properties
     @property
@@ -43,8 +41,13 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", case_sensitive=True
     )
 
-    # Validators
-    @field_validator("QUEUE_FEATURE", mode="before")
+    ## Validators
+    # Booleans
+    @field_validator(
+        "QUEUE_FEATURE",
+        "DATABASE_FEATURE",
+        mode="before",
+    )
     @classmethod
     def boolean_validator(cls, value):
         if isinstance(value, bool):
