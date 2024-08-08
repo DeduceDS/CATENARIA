@@ -40,19 +40,19 @@ class Vano(BaseModel):
 
     model_config = {"json_schema_extra": {"examples": [VANO_JSON_EXAMPLE]}}
 
-    def to_dict(self):
-        return {
-            "OBJECTID_VANO_2D": self.OBJECTID_VANO_2D,
-            "ID_VANO": self.ID_VANO,
-            "LONGITUD_2D": self.LONGITUD_2D,
-            "COORDENADA_X_INICIO": self.COORDENADA_X_INICIO,
-            "COORDENADA_Y_INICIO": self.COORDENADA_Y_INICIO,
-            "COORDENADA_X_FIN": self.COORDENADA_X_FIN,
-            "COORDEANDA_Y_FIN": self.COORDEANDA_Y_FIN,
-            "APOYOS": [apoyo.model_dump() for apoyo in self.APOYOS],
-            "CONDUCTORES": [conductor.model_dump() for conductor in self.CONDUCTORES],
-            "LIDAR": self.LIDAR.model_dump(),
-        }
+    # def to_dict(self):
+    #     return {
+    #         "OBJECTID_VANO_2D": self.OBJECTID_VANO_2D,
+    #         "ID_VANO": self.ID_VANO,
+    #         "LONGITUD_2D": self.LONGITUD_2D,
+    #         "COORDENADA_X_INICIO": self.COORDENADA_X_INICIO,
+    #         "COORDENADA_Y_INICIO": self.COORDENADA_Y_INICIO,
+    #         "COORDENADA_X_FIN": self.COORDENADA_X_FIN,
+    #         "COORDEANDA_Y_FIN": self.COORDEANDA_Y_FIN,
+    #         "APOYOS": [apoyo.model_dump() for apoyo in self.APOYOS],
+    #         "CONDUCTORES": [conductor.model_dump() for conductor in self.CONDUCTORES],
+    #         "LIDAR": self.LIDAR.model_dump(),
+    #     }
 
 
 class Linea(BaseModel):

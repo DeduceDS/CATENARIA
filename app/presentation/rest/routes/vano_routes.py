@@ -17,10 +17,12 @@ if settings.DATABASE_FEATURE:
 import json
 import tempfile
 
+# Routers
 vano_router = APIRouter(prefix="/vano", tags=["Vano"])
 vano_database_router = APIRouter(prefix="/vano", tags=["Database"])
 
 
+# Predict
 @vano_router.post("/predict")
 async def predict_vano(vano: Vano) -> VanoPrediction:
     predict_service = LineaPredictServiceImpl()
@@ -28,7 +30,7 @@ async def predict_vano(vano: Vano) -> VanoPrediction:
     return prediction
 
 
-# DATABASE
+# Database vano operations
 if settings.DATABASE_FEATURE:
 
     @vano_database_router.post("/upload_linea_file")
