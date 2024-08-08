@@ -2,7 +2,7 @@
 import asyncio
 from celery import Celery
 from app.config import CELERY_BROKER_URL, CELERY_RESULT_BACKEND
-from app.application.services import ElectraPredictServiceImpl
+from app.application.services import LineaPredictServiceImpl
 
 celery_app = Celery(
     "electra_tasks",
@@ -25,9 +25,9 @@ celery_app.conf.update(
     queue="predict_vanos_queue",
     track_started=True,
 )
-def process_electra_data(self, data):
+def predict_linea(self, data):
     self.update_state(state="STARTED", meta={"progress": 0})
-    predict_service = ElectraPredictServiceImpl()
+    predict_service = LineaPredictServiceImpl()
 
     # Run the coroutine in a new event loop
     loop = asyncio.get_event_loop()
