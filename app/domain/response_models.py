@@ -1,20 +1,18 @@
-from app.domain.models import *
+# /app/domain/response_models.py
+from pydantic import BaseModel
 
 
 class VanoPrediction(BaseModel):
-    PARAMETROS_a_h_k: dict
-    RECONSTRUCION: str
+    ID_VANO: str
     CONDUCTORES_CORREGIDOS: dict
-    CONDUCTORES_CORREGIDOS_PARAMETROS: dict
+    PARAMETROS_a_h_k: dict
     FLAG: str
     NUM_CONDUCTORES: int
-    NUM_CONDUCTORES_FIABLES: bool
+    NUM_CONDUCTORES_FIABLE: bool
     CONFIG_CONDUCTORES: int
     COMPLETITUD: str
+    RECONSTRUCCION: str
+    PORCENTAJE_HUECOS: float
+    # CONDUCTORES_CORREGIDOS_PARAMETROS: dict
     ERROR_POLILINEA: float
     ERROR_CATENARIA: float
-
-
-class VanoPredictionResponseSchema(BaseModel):
-    ID_VANO: str
-    PREDICCION: VanoPrediction
