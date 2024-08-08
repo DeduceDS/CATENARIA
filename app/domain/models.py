@@ -52,5 +52,5 @@ class Vano(BaseModel):
         }
 
 
-class ElectraData(BaseModel):
+class Linea(BaseModel):
     vanos: List[Vano]
