@@ -27,6 +27,7 @@ loguru = "^0.7.2"
 matplotlib = "^3.9.0"
 plotly = "^5.22.0"
 redis = "^5.0.7"
+pydantic-settings = "^2.4.0"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"
