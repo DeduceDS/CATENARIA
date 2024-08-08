@@ -1,109 +1,13 @@
-from electra_package.modules_clustering import *
-from electra_package.modules_preprocess import *
-from electra_package.modules_utils import *
-from electra_package.modules_main2 import *
-from electra_package.modules_plots import *
-from electra_package.modules_fits import *
-from sklearn.neighbors import NearestNeighbors
-from scipy.stats import linregress
-import copy
+import pandas as pd
+import numpy as np
+import json
+import matplotlib.pyplot as plt
+from loguru import logger
 
-
-def set_logger(level):
-    
-    logger.remove() # remove the default logger
-    # Adding new levels: Critical = Text with Purple Background, Title: Light 
-    logger.level("CRITICAL", color = "<bold><bg #AF5FD7>")
-    try:
-        logger.level("TITLE")
-    except ValueError:
-        logger.level("TITLE", color="<bold><fg 86>", no=21)
-    logger.add(sys.stdout, format = "<lvl>{message}</lvl>", colorize=True, backtrace=True, diagnose=True, level=level)  
-    logger.info(f"Setting logger")
-    
-    
-def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
-    
-    logger.info(f"Fitting with catenaria function")
-    
-    def catenaria(x, a, h, k):
-        return a*np.cosh((x-h)/a)+k
-    
-    p0 = [1, 0, 0]  # a, h, k
-
-    # def catenaria(x, a, b, c, d):
-    #         return a + b*x + c*x**2 + d*x**3
-    # p0 = [0, 1, 1, 1]
-    
-    x_pols = []
-    y_pols = []
-    z_pols = []
-    params = []
-    
-    logger.info(f"Interquartile filtering prefit")
-    # plt.figure(figsize=(12,8))
-    
-    for l,clus in enumerate(clusters):
-        
-    
-        clus = clean_outliers_2(clus)
-        
-        y_pol, z_pol, parametros, metrics = fit_3D_coordinates_2(clus[1,:], clus[2,:], catenaria, p0)
-        slope, intercept, r_value1, p_value, std_err = linregress(clus[1,:], clus[0,:])
-        
-        x_pol = slope * y_pol + intercept
-        
-        x_pols.append(x_pol)
-        y_pols.append(y_pol)
-        z_pols.append(z_pol)
-        params.append(parametros)
-        
-    #     plt.subplot(1,3,l+1)
-    #     plt.scatter(clus[1,:], clus[2,:])
-    #     plt.scatter(y_pol, z_pol)
-    
-    # plt.show()
-    
-    logger.info(f"Evaluating fits")
-
-    resultados_eval = evaluar_ajuste(y_pols, z_pols, rotated_vertices, vano_length, clusters)
-    
-    pols = [x_pols, y_pols, z_pols]
-    
-    return pols, params, resultados_eval, metrics
-
-def stack_unrotate_fits(pols, mat):
-
-    fit1=np.vstack((pols[0][0], pols[1][0], pols[2][0]))
-    fit2=np.vstack((pols[0][1], pols[1][1], pols[2][1]))
-    fit3=np.vstack((pols[0][2], pols[1][2], pols[2][2]))
-
-    mat_neg,fit1=un_rotate_points(fit1,mat)
-    mat_neg,fit2=un_rotate_points(fit2,mat)
-    mat_neg,fit3=un_rotate_points(fit3,mat)
-    
-    return fit1, fit2, fit3
-
-def puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, vano_length):
-    
-    logger.success(f"Saving results")
-
-    if evaluaciones[0] == 0 and evaluaciones[1] == 0 and evaluaciones[2] == 0 and evaluaciones[3] == 0:
-        response_vano['FLAG'] = 'no_vertices'
-        
-    else:
-        response_vano["FLAG"] = "good_fit"
-        
-    response_vano['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
-    response_vano['CONDUCTORES_CORREGIDOS'][str(1)]=fit2.T.tolist()
-    response_vano['CONDUCTORES_CORREGIDOS'][str(2)]=fit3.T.tolist()
-    response_vano['PARAMETROS(a,h,k)'][str(0)]=params[0]
-    response_vano['PARAMETROS(a,h,k)'][str(1)]=params[1]
-    response_vano['PARAMETROS(a,h,k)'][str(2)]=params[2]
-    
-    response_vano=puntuación_por_vano(response_vano, evaluaciones, vano_length)
-                        
-    return response_vano
+from electra_package.modules_preprocess import down_sample_lidar, scale_vertices,scale_conductor, rotate_vano, clean_outliers, clean_outliers_2
+from electra_package.modules_utils import set_logger, unscale_fits, extract_vano_values
+from electra_package.modules_main2 import analyze_backings, analyze_conductor_configuration, cluster_and_evaluate, extract_conductor_config, puntuate_and_save, fit_and_evaluate_conds
+from electra_package.modules_fits import stack_unrotate_fits
 
 def process_vano(vano):
     

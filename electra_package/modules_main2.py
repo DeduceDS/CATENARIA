@@ -1,28 +1,16 @@
-
 from loguru import logger
 from statistics import mode
+import pandas as pd
+import numpy as np
 import time
-import sys
+
 from scipy.stats import linregress
 
-from electra_package.modules_utils import *
-from electra_package.modules_clustering import *
-from electra_package.modules_preprocess import *
-from electra_package.modules_plots import *
-from electra_package.modules_fits import *
+from electra_package.modules_clustering import kmeans_clustering, dbscan_find_clusters_3
+from electra_package.modules_preprocess import clean_outliers, clean_outliers_2
+from electra_package.modules_fits import fit_3D_coordinates_2
+from electra_package.puntuacion import puntuación_por_vano, evaluar_ajuste
 
-
-def set_logger(level):
-    
-    logger.remove() # remove the default logger
-    # Adding new levels: Critical = Text with Purple Background, Title: Light 
-    logger.level("CRITICAL", color = "<bold><bg #AF5FD7>")
-    try:
-        logger.level("TITLE")
-    except ValueError:
-        logger.level("TITLE", color="<bold><fg 86>", no=21)
-    logger.add(sys.stdout, format = "<lvl>{message}</lvl>", colorize=True, backtrace=True, diagnose=True, level=level)  
-    logger.info(f"Setting logger")
 
 def analyze_backings(vano_length, apoyo_values, extremos_values):
     
@@ -60,6 +48,128 @@ def analyze_backings(vano_length, apoyo_values, extremos_values):
     # Plot filter to plot bad cases?
     # if any([plot_filter=='all',plot_filter=='bad_backing']):
         # plot_vano(f'{idv} Bad_Backing',X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
+        
+    return list(extremos_values)
+
+def define_backings(vano_length, apoyo_values, coord):
+    """
+    Define the backings (extremos) based on the length of the span and the coordinates of the supports.
+
+    This function clusters the support coordinates into two groups using k-means clustering, calculates
+    the center of mass for each group, and determines the coordinates of the backings. If the distance
+    between the centroids of the clusters significantly deviates from the provided span length, the
+    function returns -1 indicating an error.
+
+    Parameters:
+    vano_length (float): The length of the span (vano).
+    apoyo_values (list of lists or numpy.ndarray): The x, y, and z coordinates of the supports.
+
+    Returns:
+    list: A list containing three numpy arrays representing the x, y, and z coordinates of the backings
+        for each support. If the distance between centroids deviates significantly from the span length,
+        returns -1.
+    """
+    
+    logger.warning(f"Redefining backings")
+    
+    points = np.array(apoyo_values)
+    
+    labels, centroids = kmeans_clustering(points, 2, 100, coord)
+            
+    apoyos = []
+    extremos = []
+
+    for lab in np.unique(labels):
+
+        apoyo = np.array(apoyo_values)[:, labels == lab]
+
+        mean_x = np.mean(apoyo[0,:])
+        mean_y = np.mean(apoyo[1,:])
+        max_z = np.max(apoyo[2,:])
+        min_z = np.min(apoyo[2,:])
+        
+        c_mass1 = np.array([mean_x, mean_y, min_z])
+        c_mass2 = np.array([mean_x, mean_y, max_z])
+        
+        extremos.append(c_mass1)
+        extremos.append(c_mass2)
+        
+        apoyos.append(apoyo)
+
+    
+    dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
+    extremos = np.array(extremos)
+    
+    if 100*abs(dist - vano_length)/vano_length > 20.0:
+    
+        logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
+        logger.trace(f"Vano length, distance {vano_length, dist}")
+        logger.trace(f"Invertir coordenadas")
+        
+        if coord == 0:
+            coord = 1
+        else:
+            coord = 0
+            
+        labels, centroids = kmeans_clustering(points, 2, 100, coord)
+                
+        apoyos = []
+        extremos = []
+
+        for lab in np.unique(labels):
+
+            apoyo = np.array(apoyo_values)[:, labels == lab]
+
+            mean_x = np.mean(apoyo[0,:])
+            mean_y = np.mean(apoyo[1,:])
+            max_z = np.max(apoyo[2,:])
+            min_z = np.min(apoyo[2,:])
+            
+            c_mass1 = np.array([mean_x, mean_y, min_z])
+            c_mass2 = np.array([mean_x, mean_y, max_z])
+            
+            extremos.append(c_mass1)
+            extremos.append(c_mass2)
+            
+            apoyos.append(apoyo)
+            
+        dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
+        extremos = np.array(extremos)
+
+        if 100*abs(dist - vano_length)/vano_length > 20.0:
+
+            logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
+            logger.trace(f"Vano length, distance {vano_length, dist}")
+            logger.warning("SOLO HAY 1 APOYO")
+            
+            if coord == 0:
+                coord1, coord2 = 1, 2
+            else:
+                coord1, coord2 = 0, 2
+            
+            # plt.figure(figsize=(12,8))
+            # plt.subplot(121)
+            # plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
+            # plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
+            # plt.xlabel('X Coordinate')
+            # plt.ylabel('Y Coordinate')
+            # plt.subplot(122)
+            # plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
+            # plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
+            # plt.xlabel('X Coordinate')
+            # plt.ylabel('Z Coordinate')
+            # plt.title(f'Custom 1D K-means Clustering for coord {coord}')
+        
+            # plt.show()
+            
+            return -1
+                        
+    # z_vals = np.stack([np.array(extremos)[0,2], np.array(extremos)[1,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
+    z_vals = np.stack([np.array(extremos)[2,2], np.array(extremos)[3,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
+    y_vals =  np.stack([np.array(extremos)[2,1], np.array(extremos)[3,1], np.array(extremos)[0,1], np.array(extremos)[1,1]])
+    x_vals =  np.stack([np.array(extremos)[2,0], np.array(extremos)[3,0], np.array(extremos)[0,0], np.array(extremos)[1,0]])
+    
+    extremos_values = [x_vals, y_vals, z_vals]
         
     return list(extremos_values)
 
@@ -308,8 +418,8 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
     
     logger.info(f"Fitting with catenaria function")
     
-    # def catenaria(x, a, h, k):
-    #     # return a*np.cosh((x-h)/a)+k
+    def catenaria(x, a, h, k):
+        return a*np.cosh((x-h)/a)+k
     
     p0 = [1, 0, 0]  # a, h, k
 
@@ -354,37 +464,23 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
     
     return pols, params, resultados_eval, metrics
 
+def puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, vano_length):
+    
+    logger.success(f"Saving results")
 
-# def puntuate_and_save(vano, fit1, fit2, fit3, params, evaluaciones):
-
-    
-#     logger.success(f"Saving results")
-    
-#     if evaluaciones == (0, 0, 0, 0, 0, 0):
-#         vano['flag'] = 'no_vertices'
+    if evaluaciones[0] == 0 and evaluaciones[1] == 0 and evaluaciones[2] == 0 and evaluaciones[3] == 0:
+        response_vano['FLAG'] = 'no_vertices'
         
-#     else:
-#         vano["flag"] = "good_fit"
+    else:
+        response_vano["FLAG"] = "good_fit"
         
-#     vano['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
-#     vano['CONDUCTORES_CORREGIDOS'][str(1)]=fit2.T.tolist()
-#     vano['CONDUCTORES_CORREGIDOS'][str(2)]=fit3.T.tolist()
-#     vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(0)]=params[0]
-#     vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(1)]=params[1]
-#     vano['CONDUCTORES_CORREGIDOS_PARAMETROS_(a,h,k)'][str(2)]=params[2]
+    response_vano['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
+    response_vano['CONDUCTORES_CORREGIDOS'][str(1)]=fit2.T.tolist()
+    response_vano['CONDUCTORES_CORREGIDOS'][str(2)]=fit3.T.tolist()
+    response_vano['PARAMETROS(a,h,k)'][str(0)]=params[0]
+    response_vano['PARAMETROS(a,h,k)'][str(1)]=params[1]
+    response_vano['PARAMETROS(a,h,k)'][str(2)]=params[2]
     
-#     puntuacion=puntuación_por_vano(vano, evaluaciones).to_json()
-#     puntuacion_dict = json.loads(puntuacion)
-    
-#     for n in puntuacion_dict:
-#         puntuacion_dict[n]=puntuacion_dict[n]["0"]
-        
-#     del puntuacion_dict['Vano']
-    
-#     # puntuacion_dict['Continuidad']=finc[0]
-#     puntuacion_dict['Conductores identificados']=vano['line_number']
-#     puntuacion_dict['Output']=vano['flag']
-#     vano['PUNTUACIONES']=puntuacion_dict
+    response_vano=puntuación_por_vano(response_vano, evaluaciones, vano_length)
                         
-#     return vano
-
+    return response_vano
