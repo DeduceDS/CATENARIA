@@ -3,9 +3,9 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.presentation.rest.routes.vano_routes import vano_router
 from app.presentation.rest.routes.queue_routes import queue_router
+from app.tasks.celery_app import celery_app
 
 # from app.infrastructure.database import init_db
-from app.tasks.celery_app import celery_app
 
 
 @asynccontextmanager
