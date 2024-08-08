@@ -1,7 +1,8 @@
 # app/main.py
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from app.presentation.api import router
+from app.presentation.rest.routes.vano_routes import vano_router
+from app.presentation.rest.routes.queue_routes import queue_router
 
 # from app.infrastructure.database import init_db
 from app.tasks.celery_app import celery_app
@@ -16,7 +17,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-app.include_router(router)
+app.include_router(vano_router)
+app.include_router(queue_router)
 
 
 app.celery_app = celery_app
