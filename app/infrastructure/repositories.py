@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 from app.application.interfaces import VanoRepository
 from app.domain.models import Vano, Apoyo, Conductor, Lidar
-from app.infrastructure.database import Base, SCHEMA_NAME
+from app.infrastructure.database import Base
+from app.config import settings
 
 vano_table = Table(
     "vanos",
@@ -22,7 +23,7 @@ vano_table = Table(
     Column("APOYOS", JSON),
     Column("CONDUCTORES", JSON),
     Column("LIDAR", JSON),
-    schema=SCHEMA_NAME,
+    schema=settings.SCHEMA_NAME,
 )
 
 

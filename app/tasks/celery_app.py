@@ -1,13 +1,13 @@
 # app/tasks/celery_app.py
 import asyncio
 from celery import Celery
-from app.config import CELERY_BROKER_URL, CELERY_RESULT_BACKEND
+from app.config import settings
 from app.application.services import LineaPredictServiceImpl
 
 celery_app = Celery(
     "electra_tasks",
-    broker=CELERY_BROKER_URL,
-    backend=CELERY_RESULT_BACKEND,
+    broker=settings.CELERY_BROKER_URL,
+    backend=settings.CELERY_RESULT_BACKEND,
     broker_connection_retry=True,
     broker_connection_retry_on_startup=True,
 )
