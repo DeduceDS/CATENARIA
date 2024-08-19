@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from loguru import logger
+import random
 
 from sklearn.neighbors import NearestNeighbors
 from sklearn.neighbors import kneighbors_graph
@@ -9,7 +10,7 @@ from sklearn.cluster import SpectralClustering
 from sklearn.cluster import DBSCAN
 
 #### FUNCTIONS FOR CLUSTERING ####
-def initialize_centroids(points, n_clusters, coord):
+def initialize_centroids(points, n_clusters, coord, mode = "Normal"):
     """
     Initialize centroids for clustering based on the minimum, maximum, and optionally mean of the x-coordinates.
 
@@ -21,7 +22,16 @@ def initialize_centroids(points, n_clusters, coord):
     numpy.ndarray: The initialized centroids.
     """
     logger.trace(f"Initializing for {n_clusters} clusters")
+    
     centroids = np.zeros(n_clusters)
+    
+    if mode == "Random":
+        
+        centroids[0] = random.uniform(-1, 1)
+        centroids[1] = random.uniform(-1, 1)
+        centroids[2] = random.uniform(-1, 1)
+        
+        return centroids
     
     centroids[0] = np.min(points[coord, :])
     centroids[1] = np.max(points[coord, :])
@@ -68,7 +78,7 @@ def update_centroids(points, labels, n_clusters, coord):
             new_centroids[i] = np.mean(cluster_points)
     return new_centroids
 
-def kmeans_clustering(points, n_clusters, max_iterations, coord):
+def kmeans_clustering(points, n_clusters, max_iterations, coord, mode = "Normal"):
     """
     Perform KMeans clustering on the specified coordinate of the points.
 
@@ -82,12 +92,13 @@ def kmeans_clustering(points, n_clusters, max_iterations, coord):
     tuple: Cluster labels and centroids.
     """
     logger.debug(f"Starting KMeans clustering for coord: {coord}")
-    centroids = initialize_centroids(points, n_clusters, coord)
+    centroids = initialize_centroids(points, n_clusters, coord, mode)
+    logger.debug(f"Initzialization {centroids}")
     for iteration in range(max_iterations):
         labels = assign_clusters(points, centroids, coord)
         new_centroids = update_centroids(points, labels, n_clusters, coord)
         if np.allclose(new_centroids, centroids):
-            logger.trace(f"Convergence reached at iteration {iteration}")
+            logger.debug(f"Convergence reached at iteration {iteration}")
             break
         centroids = new_centroids
     return labels, centroids
@@ -112,10 +123,10 @@ def plot_clusters(points, labels, centroids, coord):
     plt.figure(figsize=(12,8))
     plt.subplot(1,2,1)
     plt.scatter(points[coord, :], points[coord1, :], c=labels, cmap='viridis', s=1)
-    plt.vlines(centroids, ymin=np.min(points[coord1, :]), ymax=np.max(points[coord1, :]), color='red', label='Centroids')
+    # plt.vlines(centroids, ymin=np.min(points[coord1, :]), ymax=np.max(points[coord1, :]), color='red', label='Centroids')
     plt.subplot(1,2,2)
     plt.scatter(points[coord, :], points[coord2, :], c=labels, cmap='viridis', s=1)
-    plt.vlines(centroids, ymin=np.min(points[coord2, :]), ymax=np.max(points[coord2, :]), color='red', label='Centroids')
+    # plt.vlines(centroids, ymin=np.min(points[coord2, :]), ymax=np.max(points[coord2, :]), color='red', label='Centroids')
     plt.title(f'Clusters along {["X", "Y", "Z"][coord]}-axis vs {["X", "Y", "Z"][coord1]}-axis')
     plt.xlabel(f'{["X", "Y", "Z"][coord]} Coordinate')
     plt.ylabel(f'{["X", "Y", "Z"][coord1]} Coordinate')
@@ -194,7 +205,7 @@ def dbscan_find_clusters_3(X_scaled):
     The silhouette score measures how similar an object is to its own cluster compared to other clusters, providing an indication of the quality of the clustering.
     """
 
-    ar=[5,10,20]
+    ar=[5,10,15]
     for k in ar:
         
         centroids,labels=group_dbscan_3(k,X_scaled.T)
@@ -213,6 +224,43 @@ def dbscan_find_clusters_3(X_scaled):
     centroids,labels=group_dbscan_3(best_k,X_scaled.T)
 
     return centroids,labels
+
+
+def extract_n_clusters(X_scaled):
+
+    cent, labs = dbscan_find_clusters_3(X_scaled)
+
+    real_clust = 0
+    noise = False
+    total_points = X_scaled.shape[1]
+
+    points_per_clust = total_points/(len(labs)-1)
+
+    noise_cluster = 0
+    real_labels = []
+    clusters = []
+    
+    # print(labs)
+
+    for lab in np.unique(labs):
+        
+        logger.debug(f"Proportion of cluster: {100*abs(np.sum(lab == labs))/total_points} for {len(np.unique(labs))-1} clusters")
+        if 100*np.sum(lab == labs)/total_points >= 20.0:
+            
+            if lab == -1:
+                
+                noise = True
+                noise_cluster = X_scaled[:,lab == labs]
+                
+            else:
+                real_labels.append(lab)
+                real_clust += 1
+                clusters.append(X_scaled[:,lab == labs])
+                
+
+                
+    return clusters, noise_cluster
+
 
 ############################ NOT IN RELEASE #########################################
 

@@ -1,15 +1,42 @@
 from loguru import logger
 from statistics import mode
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import time
 
 from scipy.stats import linregress
 
-from electra_package.modules_clustering import kmeans_clustering, dbscan_find_clusters_3
-from electra_package.modules_preprocess import clean_outliers, clean_outliers_2
+from electra_package.modules_clustering import kmeans_clustering, dbscan_find_clusters_3, extract_n_clusters
+from electra_package.modules_preprocess import clean_outliers, clean_outliers_2, scale_conductor
 from electra_package.modules_fits import fit_3D_coordinates_2
 from electra_package.puntuacion import puntuación_por_vano, evaluar_ajuste
+from electra_package.modules_plots import plot_clusters, plot_data
+
+
+def analyze_polilinia_values(vert_values, vano_length):
+
+    expected_conductor_number = len(vert_values)
+
+    empty_poli = 0
+
+    for poli in vert_values:
+        
+        if len(poli) == 0:
+            empty_poli += 1
+            continue
+        
+        else:
+            
+            max = poli[:,np.where(poli[1] == np.max(poli[1]))].flatten()
+            min = poli[:,np.where(poli[1] == np.min(poli[1]))].flatten()
+            
+            logger.trace(f"Empy polilinia %: {abs(np.linalg.norm(max-min)-vano_length)/vano_length}")
+            
+            if abs(np.linalg.norm(max-min)-vano_length)/vano_length > 10.0:        
+                empty_poli += 1
+            
+    return empty_poli, expected_conductor_number
 
 
 def analyze_backings(vano_length, apoyo_values, extremos_values):
@@ -18,9 +45,18 @@ def analyze_backings(vano_length, apoyo_values, extremos_values):
     start_time1 = time.time()
 
     logger.info(f"Analyzing backings")
-        
-    # apoyo_values = np.array(clean_outliers_2(apoyo_values))
     
+    # scaled_apoyos,scaler_x,scaler_y,scaler_z = scale_conductor(apoyo_values)
+    # scaled_apoyos = clean_outliers_2(scaled_apoyos)
+    
+    # clusters, noise_cluster = extract_n_clusters(scaled_apoyos)
+    
+    # if noise_cluster != 0:
+    #     logger.critical(f"Found noise in backings!")
+    # if len(clusters) == 3:
+    #     logger.critical(f"Found {len(clusters)} backings!")
+    #     return -1
+ 
     logger.trace(f"Variance distribution in backings {np.std(apoyo_values[0,:]), np.std(apoyo_values[1,:])}")
     
     coord = np.argmax([np.std(apoyo_values[0,:]), np.std(apoyo_values[1,:])], axis = 0)
@@ -78,6 +114,9 @@ def define_backings(vano_length, apoyo_values, coord):
             
     apoyos = []
     extremos = []
+    
+    max_dist1 = 0
+    max_dist2 = 0
 
     for lab in np.unique(labels):
 
@@ -238,7 +277,11 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
 
     for i in range(2):
 
-        labels, centroids = kmeans_clustering(X_scaled, n_conds, 500, coord)
+        if i == 0:
+            labels, centroids = kmeans_clustering(X_scaled, n_conds, 500, coord, mode = "Normal")
+        else:
+            labels, centroids = kmeans_clustering(X_scaled, n_conds, 500, coord, mode = "Random")
+            
         max_size = 0
         
         for lab in labels:
@@ -246,19 +289,17 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
             
             if 100*(clust.shape[1]/len(labels)) > max_size: max_size = 100*(clust.shape[1]/len(labels))
         
-        if abs(max_size - (100/n_conds)) > 10:  #### CHECK ###
+        if abs(max_size - (100/n_conds)) > 20:  #### CHECK ###
             
             # logger.trace(f"bad cluster proportion, {100*(clust.shape[1]/len(labels)), (100/n_conds)}")
-            # if  n_conds == 2 and abs(100*(clust.shape[1]/len(labels)) - (100/n_conds)) > 20:
             
             logger.debug(f"{clust.shape[1],len(labels)}")
             logger.debug(f"break, bad clusters, {max_size, (100/n_conds)}")
             good_clust = False
             
-            # if n_conds != 2:
-            #     plot_clusters(X_scaled, labels, centroids, coord)
+            plot_clusters(X_scaled, labels, centroids, coord)
                 
-            return good_clust, clusters
+            continue
             
                 
         min_cent = np.min(centroids)
@@ -332,17 +373,17 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
     return good_clust, clusters
         
 
-def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos, cropped_conds):
+def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     
     start_time2 = time.time()
     
     # Extract ymin and ymax values of rotated conductors ***
-    rotated_ymin=min(rotated_conds[1])  # More extreme values?
-    rotated_ymax=max(rotated_conds[1])
+    # rotated_ymin=min(rotated_conds[1])  # More extreme values?
+    # rotated_ymax=max(rotated_conds[1])
     
-    # Scale ymin and ymax values
-    rotated_ymax=scaler_y.transform(np.array([rotated_ymax]).reshape(-1, 1))[0]
-    rotated_ymin=scaler_y.transform(np.array([rotated_ymin]).reshape(-1, 1))[0]
+    # # # Scale ymin and ymax values
+    # rotated_ymax=scaler_y.transform(np.array([rotated_ymax]).reshape(-1, 1))[0]
+    # rotated_ymin=scaler_y.transform(np.array([rotated_ymin]).reshape(-1, 1))[0]
 
     # Conductor geometry/configuration analysis
     # Let's study and categorize this vano in terms of it's conductors
@@ -354,6 +395,8 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
     maxy=max(rotated_extremos[1,1],rotated_extremos[1,2])
     miny=min(rotated_extremos[1,1],rotated_extremos[1,2])
     leny=maxy-miny  # Equal to 2D length?
+    
+    thresh_value = X_scaled.shape[1]/20
     
     # Filter and extract 10 10% length segments
 
@@ -380,7 +423,7 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
 
         l0=X_scaled[:,filt[g]].shape[1]
         fl=pd.Series(X_scaled[2,filt[g]]).var()-pd.Series(X_scaled[0,filt[g]]).var()
-        centroids0,labels0=dbscan_find_clusters_3(X_scaled[:,filt[g]]) if l0>20 else ([],[])
+        centroids0,labels0=dbscan_find_clusters_3(X_scaled[:,filt[g]]) if l0>thresh_value else ([],[])
         greater_var_z_than_x.append(True if fl>=0 else False)
         c.append(centroids0)
         ncl.append(len(centroids0))
@@ -395,7 +438,7 @@ def extract_conductor_config(X_scaled, scaler_y, rotated_conds, rotated_extremos
     var_z_x=mode(greater_var_z_than_x)
     
     # Compute the number of empty fragments
-    num_empty=np.array([l0<20 for l0 in l]).sum()
+    num_empty=np.array([l0<thresh_value for l0 in l]).sum()
     
     # Define 3 completeness categories
     completeness=np.array(['incomplete','partially incomplete','full'])
@@ -437,6 +480,8 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
     
     for l,clus in enumerate(clusters):
         
+        x_pol, y_pol, z_pol = [], [], []
+        slope, intercept = 0, 0
     
         clus = clean_outliers_2(clus)
         
@@ -450,9 +495,19 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
         z_pols.append(z_pol)
         params.append(parametros)
         
-    #     plt.subplot(1,3,l+1)
+    #     plt.subplot(2,3,l+1)
     #     plt.scatter(clus[1,:], clus[2,:])
     #     plt.scatter(y_pol, z_pol)
+        
+    #     plt.subplot(2,3,l+4)
+    #     plt.scatter(clus[0,:], clus[1,:])
+    #     plt.scatter(x_pol, y_pol)
+        
+    #     plt.title(f"Fit for cluster: {l}")
+    #     # logger.debug(f"Min z value, max z value {np.min(z_pol)}, {np.max(z_pol)}")
+    #     logger.debug(f"Min z value, max z value {np.min(clus[2,:])}, {np.max(clus[2,:])}")
+    #     # logger.debug(f"Min y value, max y value {np.min(y_pol)}, {np.max(y_pol)}")
+    #     logger.debug(f"Min y value, max y value {np.min(clus[1,:])}, {np.max(clus[1,:])}")
     
     # plt.show()
     

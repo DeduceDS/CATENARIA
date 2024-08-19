@@ -8,6 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
 from electra_package.modules_utils import  look_for_vano, get_coord, flatten_sublist, extract_vano_values, get_bad_ids
 
+
 def voxel_grid_downsampling_with_centroids(point_cloud, voxel_size):
     """
     Perform voxel grid downsampling on 3D points, using the centroid of points within each voxel.
