@@ -76,7 +76,7 @@ def analyze_backings(vano_length, apoyo_values, extremos_values):
         
         # Include flag of bad extreme values
         # Set the line value of this element as 0 ****
-        logger.warning("UN APOYO LIDAR")
+        logger.warning("NO HAY 2 APOYOS LIDAR")
         # plot_data(f"{idv}",cond_values, apoyo_values, vert_values, extremos_values)
         
         return -1
@@ -139,11 +139,11 @@ def define_backings(vano_length, apoyo_values, coord):
     dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
     extremos = np.array(extremos)
     
-    if 100*abs(dist - vano_length)/vano_length > 20.0:
+    if 100*abs(dist - vano_length)/vano_length > 15.0:
     
-        logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
-        logger.trace(f"Vano length, distance {vano_length, dist}")
-        logger.trace(f"Invertir coordenadas")
+        logger.debug(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
+        logger.debug(f"Vano length, distance {vano_length, dist}")
+        logger.debug(f"Invertir coordenadas")
         
         if coord == 0:
             coord = 1
@@ -175,31 +175,31 @@ def define_backings(vano_length, apoyo_values, coord):
         dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
         extremos = np.array(extremos)
 
-        if 100*abs(dist - vano_length)/vano_length > 20.0:
+        if 100*abs(dist - vano_length)/vano_length > 15.0:
 
-            logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
-            logger.trace(f"Vano length, distance {vano_length, dist}")
-            logger.warning("SOLO HAY 1 APOYO")
+            logger.debug(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
+            logger.debug(f"Vano length, distance {vano_length, dist}")
+            logger.warning("NO HAY DOS APOYOS")
             
             if coord == 0:
                 coord1, coord2 = 1, 2
             else:
                 coord1, coord2 = 0, 2
             
-            # plt.figure(figsize=(12,8))
-            # plt.subplot(121)
-            # plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
-            # plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
-            # plt.xlabel('X Coordinate')
-            # plt.ylabel('Y Coordinate')
-            # plt.subplot(122)
-            # plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
-            # plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
-            # plt.xlabel('X Coordinate')
-            # plt.ylabel('Z Coordinate')
-            # plt.title(f'Custom 1D K-means Clustering for coord {coord}')
+            plt.figure(figsize=(12,8))
+            plt.subplot(121)
+            plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
+            plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
+            plt.xlabel('X Coordinate')
+            plt.ylabel('Y Coordinate')
+            plt.subplot(122)
+            plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
+            plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
+            plt.xlabel('X Coordinate')
+            plt.ylabel('Z Coordinate')
+            plt.title(f'Custom 1D K-means Clustering for coord {coord}')
         
-            # plt.show()
+            plt.show()
             
             return -1
                         
@@ -296,9 +296,6 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
             logger.debug(f"{clust.shape[1],len(labels)}")
             logger.debug(f"break, bad clusters, {max_size, (100/n_conds)}")
             good_clust = False
-            
-            plot_clusters(X_scaled, labels, centroids, coord)
-                
             continue
             
                 
@@ -368,7 +365,7 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
 
     if not good_clust:
         logger.warning(f"BAD CLUSTERS AFTER {i} TRIALS")
-        # plot_clusters(X_scaled, labels, centroids, coord)
+        plot_clusters(X_scaled, labels, centroids, coord)
         
     return good_clust, clusters
         
@@ -428,9 +425,11 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
         c.append(centroids0)
         ncl.append(len(centroids0))
         
+    logger.debug(f"{ncl}, {centroids0}")
+        
     ##########################################
     # Obtain the mode of n_clusters along the list of size 10 == number of conductors
-    md=mode(ncl)
+    md=mode([v for v in ncl if v != 0])
         
     logger.success(f'Number of lines from mode: {md}')
     
@@ -440,11 +439,13 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     # Compute the number of empty fragments
     num_empty=np.array([l0<thresh_value for l0 in l]).sum()
     
+    logger.debug(f"{[l0<thresh_value for l0 in l]}")
+    
     # Define 3 completeness categories
     completeness=np.array(['incomplete','partially incomplete','full'])
     
     # Define the index with the completeness conditions
-    completeness_conds=np.array([num_empty>5,all([num_empty<=5,num_empty>=2]),num_empty<2])
+    completeness_conds=np.array([num_empty>8,all([num_empty<=8,num_empty>=2]),num_empty<2])
     # Extract final value with index
     finc = completeness[completeness_conds]
     

@@ -298,7 +298,7 @@ def main_pipeline(pathdata0, n_vanos):
 
     # print(len(data), bad_ids0)
 
-    set_logger("DEBUG")
+    set_logger("INFO")
 
     # Declare lists for metrics: rmse, correlations...
     rmses = []
