@@ -10,7 +10,7 @@ from scipy.stats import linregress
 from electra_package.modules_clustering import kmeans_clustering, dbscan_find_clusters_3, extract_n_clusters
 from electra_package.modules_preprocess import clean_outliers, clean_outliers_2, scale_conductor
 from electra_package.modules_fits import fit_3D_coordinates_2
-from electra_package.puntuacion import puntuación_por_vano, evaluar_ajuste
+from electra_package.puntuacionparavano import puntuacion, puntuacion_pol, puntuacionconparametros, evaluar_ajuste
 from electra_package.modules_plots import plot_clusters, plot_data
 
 
@@ -348,7 +348,7 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
                             
             if len(overlapping_clusters) == 0:
                 logger.success(f"GOOD CLUSTERS: found {n_conds}")
-                # plot_clusters(X_scaled, labels, centroids, coord)
+                plot_clusters(X_scaled, labels, centroids, coord)
                 good_clust = True
                 return good_clust, clusters
             
@@ -520,7 +520,7 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
     
     return pols, params, resultados_eval, metrics
 
-def puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, vano_length):
+def puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, vano_length, vano):
     
     logger.success(f"Saving results")
 
@@ -537,6 +537,6 @@ def puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, van
     response_vano['PARAMETROS(a,h,k)'][str(1)]=params[1]
     response_vano['PARAMETROS(a,h,k)'][str(2)]=params[2]
     
-    response_vano=puntuación_por_vano(response_vano, evaluaciones, vano_length)
+    response_vano["PUNTUACIONES"]=puntuacion_pol(vano)
                         
     return response_vano

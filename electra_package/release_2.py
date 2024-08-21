@@ -3,12 +3,13 @@ import numpy as np
 import json
 import matplotlib.pyplot as plt
 from loguru import logger
-
+import time
 from electra_package.modules_preprocess import down_sample_lidar, scale_vertices,scale_conductor, rotate_vano, clean_outliers, clean_outliers_2
 from electra_package.modules_utils import set_logger, unscale_fits, extract_vano_values
 from electra_package.modules_main2 import analyze_backings, analyze_conductor_configuration, cluster_and_evaluate, extract_conductor_config, puntuate_and_save, fit_and_evaluate_conds, analyze_polilinia_values
 from electra_package.modules_fits import stack_unrotate_fits
 from electra_package.modules_plots import *
+from electra_package.puntuacionparavano import *
 
 def process_vano(vano):
     
@@ -21,9 +22,12 @@ def process_vano(vano):
         # plot_data("good fit", cond_values, list(apoyo_values), vert_values, extremos_values)
         # plt.show()
     
-        del vano["LIDAR"]
+        # del vano["LIDAR"]
+        
+        print(np.array(extremos_values).shape)
         
         logger.critical(f"\nReference {idv}")
+        time1 = time.time()
         
         # Create new attributes for data element (dictionary)
         response_vano = {}
@@ -35,7 +39,7 @@ def process_vano(vano):
         response_vano["NUM_CONDUCTORES_FIABLE"] = False
         response_vano["CONFIG_CONDUCTORES"] = "None"
         response_vano["COMPLETITUD"] = "None"
-        response_vano["RECONSTRUCCION"] = "Imposible"
+        response_vano["RECONSTRUCCION"] = ""
         response_vano["PORCENTAJE_HUECOS"] = 0
         response_vano["ERROR_POLILINEA"] = 0
         response_vano["ERROR_CATENARIA"] = 0
@@ -48,11 +52,17 @@ def process_vano(vano):
         logger.critical(f"Expected conductors from data: {expected_conds}")
         logger.critical(f"Number of empty lines from data: {empty_pol_num}")
         
-        if expected_conds == 6 or expected_conds == 7:
+        if expected_conds > 3:
             
             logger.error(f"3 conductors expected, found {expected_conds}")
             response_vano['FLAG'] = "bad_cond_number"
+            
+            plot_data("Bad clustering", cond_values, apoyo_values, vert_values, extremos_values)
+            plt.show()
+            
             return response_vano, -1
+        
+        response_vano["PUNTUACION_APRIORI"] = puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values)
 
         logger.info(f"Downsampling LIDAR to 25%")
         apoyo_values, cond_values = down_sample_lidar(apoyo_values, cond_values)
@@ -60,31 +70,32 @@ def process_vano(vano):
         logger.info(f"Backings cloud shape: {apoyo_values.shape}, Conductor cloud shape: {cond_values.shape}")
         
         if cond_values.shape[1] < 100 or apoyo_values.shape[1] < 100:
+        
             logger.error("Empty point cloud")
             response_vano['FLAG'] = 'empty_cloud'
+            
+            plot_data("Bad clustering", cond_values, apoyo_values, vert_values, extremos_values)
+            plt.show()
+            
             return response_vano, -1
-        
-        
-        if len(extremos_values[2]) != 4:
-            logger.critical(len(extremos_values[2]))
-            logger.warning(f"Only 2 backings")
         
             
         extremos_values = analyze_backings(vano_length, apoyo_values, extremos_values)
 
         if extremos_values == -1:
         
-            # plot_data("Bad backings", cond_values, apoyo_values, vert_values, None)
-            # plt.show()
-            
             # Include flag of bad extreme values
             # Set the line value of this element as 0 ****
             logger.error(f"Bad backings")
             response_vano['FLAG'] = 'bad_backings'
+            
+            plot_data("Bad backings", cond_values, apoyo_values, vert_values, None)
+            plt.show()
+
             return response_vano, -1
         
             
-        mat, rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
+        mat, rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values, vano_length)
         
         rotated_conds = clean_outliers(rotated_conds, rotated_extremos)
         rotated_conds = clean_outliers_2(rotated_conds)
@@ -99,13 +110,18 @@ def process_vano(vano):
         num_empty, finc, md = extract_conductor_config(X_scaled, rotated_extremos, rotated_conds)
         
         response_vano["CONFIG_CONDUCTORES"] = config
-        response_vano["COMPLETITUD"] = finc + str(num_empty)
+        response_vano["COMPLETITUD"] = finc
+        response_vano["PORCENTAJE_HUECOS"] = + num_empty*10
         response_vano['NUM_CONDUCTORES'] = md
         
         if finc == "incomplete" or (md == 0 and finc != "full"):
             
             logger.error(f"Empty conductor")
             response_vano['FLAG'] = "empty_conductor"
+            
+            plot_data("Bad backings", cond_values, apoyo_values, vert_values, None)
+            plt.show()
+            
             return response_vano, -1
             
                 
@@ -122,6 +138,10 @@ def process_vano(vano):
             
             logger.error(f"Bad config")
             response_vano['FLAG'] = "bad_configuration" 
+            
+            plot_data("Bad backings", cond_values, apoyo_values, vert_values, None)
+            plt.show()
+            
             return response_vano, -1
         
         max_conds = 6
@@ -213,6 +233,10 @@ def process_vano(vano):
                 
                 logger.error(f"Bad conductor number")
                 response_vano['FLAG'] = "bad_cond_number" 
+                
+                plot_data("Bad backings", cond_values, apoyo_values, vert_values, None)
+                plt.show()
+            
                 return response_vano, -1
             
             logger.success(f"Good clustering with n conductors: {n_conds}")
@@ -225,7 +249,11 @@ def process_vano(vano):
             
             fit1, fit2, fit3 = stack_unrotate_fits(pols, mat)
             
-            response_vano = puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, vano_length)
+            time2 = time.time()
+            
+            response_vano = puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, metrics, n_conds)
+            
+            time3 = time.time()
             
             # fits = [fit1,fit2,fit3]
             
@@ -246,12 +274,14 @@ def process_vano(vano):
             
             # logger.critical(f"{np.array(pols[0]).mean(), np.array(pols[1]).mean(), np.array(pols[2]).mean()}")
             
+            logger.critical(f"Time 1, time 2: {time2-time1}, {time3-time2}")
+            
             return response_vano, metrics
             
         else:
             
-            # plot_data("Bad clustering", cond_values, apoyo_values, vert_values, extremos_values)
-            # plt.show()
+            plot_data("Bad clustering", cond_values, apoyo_values, vert_values, extremos_values)
+            plt.show()
             
             logger.error(f"Bad clustering, next vano")
             response_vano['FLAG'] = 'bad_cluster'
@@ -323,9 +353,11 @@ def main_pipeline(pathdata0, n_vanos):
             
             if metrics != -1:
                     
-                    rmses.append(metrics[0])
-                    maxes.append(metrics[1])
-                    correlations.append([metrics[2], metrics[3]])
+                    metrics = np.array(metrics)
+                    
+                    rmses.append(np.mean(metrics[:,0]))
+                    maxes.append(np.mean(metrics[:,1]))
+                    correlations.append([np.mean(metrics[:,2]), np.mean(metrics[:,3])])
                     good_cases += 1
             else:
                     # logger.error("Bad clustering")
