@@ -12,7 +12,6 @@ from sklearn.cluster import SpectralClustering
 from electra_package.modules_utils import *
 from electra_package.modules_preprocess import *
 
-
 def rmse(x, y):
     """
     RMSE entre las polilíneas y los puntos LIDAR
@@ -30,8 +29,6 @@ def rmse(x, y):
 
 def puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values, vano_length):
     
-    _, _, _, rotated_vertices, _ = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
-    
     notas_apriori = dict()
     
     if np.array(extremos_values).shape[1] != 4:
@@ -39,30 +36,37 @@ def puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values, 
         logger.critical(np.array(extremos_values).shape[1])
         logger.warning(f"No tiene 2 apoyos")
         
-        notas_apriori["NOTA"] = 0
-        notas_apriori["P_HUECO"] = 0
-        notas_apriori["DIFF2D"] = 0
-        notas_apriori["NOTA"] = 0
+        notas_apriori["P_HUECO"] = -99.0
+        notas_apriori["DIFF2D"] = -99.0
+        notas_apriori["NOTA"] = -99.0
         
         return notas_apriori
+    
+    _, _, _, rotated_vertices, _ = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
         
 
     nota = 0
     huecos = []
     diffs = []
     
-    for cond in len(rotated_vertices):
+    for cond in rotated_vertices:
         
         long_poli= np.sqrt((cond[1][0]-cond[1][-1])**2 + (cond[2][0]-cond[2][-1])**2)
         diff_2d = abs(long_poli - vano_length)/vano_length
         
-        distancias = [cond[1][i]-cond[1][i+1] for i in range(1, len(cond[1])-2)]
+        distancias = [abs(cond[1][i]-cond[1][i+1]) for i in range(1, len(cond[1])-2)]
         
         mean_dist = np.mean(distancias)
         std_dist = np.std(distancias)
         
-        thresh = mean_dist + 2*std_dist
-        total_huecos = np.sum(distancias[np.where(distancias >= thresh)])
+        thresh = mean_dist + std_dist
+        # print(np.array(distancias)[np.where(distancias >= thresh)[0]], distancias, thresh)
+        
+        # plt.hist(distancias)
+        # plt.vlines(x= thresh, ymin=0, ymax= 10)
+        # plt.show()
+        
+        total_huecos = np.sum(np.array(distancias)[np.where(distancias >= thresh)[0]])
         
         p_huecos = abs(total_huecos - vano_length)/vano_length
         
@@ -81,7 +85,7 @@ def puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values, 
     
     return notas_apriori
 
-def puntuacion_posteriori(metrics, n_conds):
+def puntuacion_aposteriori(metrics, n_conds):
     
     notas_posteriori = dict()
 
@@ -182,15 +186,6 @@ def evaluar_ajuste(x_pols, y_pols, rotated_vertices, longitud_vano, clusters):
 
     p_huecos = (p_huecos_1 + p_huecos_2 + p_huecos_3)/3
     p_huecos = float(p_huecos)
-    
-    if len(rotated_vertices) != 3:
-        logger.warning("Empty vertices...")
-        return (0, 0, 0, 0, error_nuestra, p_huecos)
-
-    for i in range(len(rotated_vertices)):
-        if len(rotated_vertices[i]) == 0:
-            logger.warning("Empty vertices...")
-            return (0, 0, 0, 0, error_nuestra, p_huecos)
 
     # Error su polilínea
     errorx1_suya = rmse(rotated_vertices[0][1], y1)

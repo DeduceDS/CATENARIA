@@ -127,34 +127,6 @@ def puntuación_por_vano(response_vano, evaluaciones, longitud):
         response_vano["ERROR_POLILINEA"] = error_suya
         response_vano["ERROR_CATENARIA"] = error_nuestra-error_nuestra*p_hueco/100
         
-    # elif len_conductores == 2:
-        
-    #     clasificacion1['Reconstrucción'].append("No posible")
-    #     x1, y1, z1 = get_coord(conductores[0]['VERTICES'])
-    #     x2, y2, z2 = get_coord(conductores[1]['VERTICES'])
-    #     long_pol1 = np.sqrt((x1[0]-x1[-1])**2 + (y1[0]-y1[-1])**2)
-    #     long_pol2 = np.sqrt((x2[0]-x2[-1])**2 + (y2[0]-y2[-1])**2)
-    #     p_hueco_1 = ((longitud - long_pol1)/longitud)*100
-    #     p_hueco_2 = ((longitud - long_pol2)/longitud)*100
-    #     p_hueco = (p_hueco_1 + p_hueco_2) / 2
-        
-    #     error_suya, p_huecos_intermedios = rmse_suya_2(vano)
-        
-    #     p_hueco = (p_hueco + p_huecos_intermedios) / 2
-    #     clasificacion1['Flag'].append(f"Tiene 2 conductores. Porcentaje de huecos: {p_hueco:.2f}%")
-    #     clasificacion1['Error polilínea'].append(error_suya)
-    #     clasificacion1['Error nuestro ajuste'].append(0)
-        
-    # elif len_conductores == 1:
-    #     clasificacion1['Reconstrucción'].append("No posible")
-    #     x1, y1, z1 = get_coord(conductores[0]['VERTICES'])
-    #     long_pol1 = np.sqrt((x1[0]-x1[-1])**2 + (y1[0]-y1[-1])**2)
-    #     p_hueco_1 = ((longitud - long_pol1)/longitud)*100
-    #     error_suya, p_huecos_intermedios = rmse_suya_1(vano)
-    #     p_hueco_1 = (p_hueco_1 + p_huecos_intermedios) / 2
-    #     clasificacion1['Flag'].append(f"Tiene 1 conductor. Porcentaje de huecos: {p_hueco_1:.2f}%")
-    #     clasificacion1['Error polilínea'].append(error_suya)
-    #     clasificacion1['Error nuestro ajuste'].append(0)
     else:
         
         response_vano["RECONSTRUCCION"] = "No posible (n_cond != 3)"

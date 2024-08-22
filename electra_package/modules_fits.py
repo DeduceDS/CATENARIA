@@ -35,7 +35,7 @@ def get_metrics(fitted_z_vals_scaled, z_vals_scaled):
     # print(f"Fit Pearson R and Fit Spearman R for z coordinate: {pearson_z}, {spearman_z}")
     # print(f"Fit error for y coordinate: {RMSE1_y}, {RMSE2_y}, {RMSE3_y}")
     
-    return RMSE_z, max_z, pearson_z, spearman_z
+    return RMSE_z, max_z, pearson_z, spearman_z, p_value
                         
 
 def fit_3D_coordinates_2(y_values, z_values, fit_function, initial_params):
@@ -76,9 +76,9 @@ def fit_3D_coordinates_2(y_values, z_values, fit_function, initial_params):
     # Interpolate the fitted values to the same length as y_pol for the 3D representation
     # z_pol = np.interp(y_pol, scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten(), fitted_z_vals, period=len(fitted_z_vals))
     
-    RMSE_z, max_z, pearson_z, spearman_z = get_metrics(fitted_z_vals_scaled, z_vals_scaled)
+    RMSE_z, max_z, pearson_z, spearman_z, p_value = get_metrics(fitted_z_vals_scaled, z_vals_scaled)
     
-    return y_pol, fitted_z_pol, parametros, [RMSE_z, max_z, pearson_z, spearman_z]
+    return y_pol, fitted_z_pol, parametros, [RMSE_z, max_z, pearson_z, spearman_z, p_value]
 
 
 def stack_unrotate_fits(pols, mat):

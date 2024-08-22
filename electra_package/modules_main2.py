@@ -10,7 +10,7 @@ from scipy.stats import linregress
 from electra_package.modules_clustering import kmeans_clustering, dbscan_find_clusters_3, extract_n_clusters
 from electra_package.modules_preprocess import clean_outliers, clean_outliers_2, scale_conductor
 from electra_package.modules_fits import fit_3D_coordinates_2
-from electra_package.puntuacionparavano import puntuacion, puntuacion_pol, puntuacionconparametros, evaluar_ajuste
+from electra_package.puntuacionparavano import puntuacion_aposteriori
 from electra_package.modules_plots import plot_clusters, plot_data
 
 
@@ -22,8 +22,9 @@ def analyze_polilinia_values(vert_values, vano_length):
 
     for poli in vert_values:
         
-        if len(poli) == 0:
+        if len(poli) <= 3:
             empty_poli += 1
+            expected_conductor_number -= 1
             continue
         
         else:
@@ -296,6 +297,8 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
             logger.debug(f"{clust.shape[1],len(labels)}")
             logger.debug(f"break, bad clusters, {max_size, (100/n_conds)}")
             good_clust = False
+            plot_clusters(X_scaled, labels, centroids, coord)
+            
             continue
             
                 
@@ -348,7 +351,7 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
                             
             if len(overlapping_clusters) == 0:
                 logger.success(f"GOOD CLUSTERS: found {n_conds}")
-                plot_clusters(X_scaled, labels, centroids, coord)
+                # plot_clusters(X_scaled, labels, centroids, coord)
                 good_clust = True
                 return good_clust, clusters
             
@@ -372,16 +375,6 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
 
 def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     
-    start_time2 = time.time()
-    
-    # Extract ymin and ymax values of rotated conductors ***
-    # rotated_ymin=min(rotated_conds[1])  # More extreme values?
-    # rotated_ymax=max(rotated_conds[1])
-    
-    # # # Scale ymin and ymax values
-    # rotated_ymax=scaler_y.transform(np.array([rotated_ymax]).reshape(-1, 1))[0]
-    # rotated_ymin=scaler_y.transform(np.array([rotated_ymin]).reshape(-1, 1))[0]
-
     # Conductor geometry/configuration analysis
     # Let's study and categorize this vano in terms of it's conductors
     
@@ -413,15 +406,15 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     # If the variance in z is greater than x then append this result
     
     c=[] # Centroid values resulting from clustering
-    greater_var_z_than_x=[] # Bool list with x vs z variance relation
+    # greater_var_z_than_x=[] # Bool list with x vs z variance relation
     ncl=[] # Number of centroids from clustering
 
     for g in range(0,k):
 
         l0=X_scaled[:,filt[g]].shape[1]
-        fl=pd.Series(X_scaled[2,filt[g]]).var()-pd.Series(X_scaled[0,filt[g]]).var()
+        # fl=pd.Series(X_scaled[2,filt[g]]).var()-pd.Series(X_scaled[0,filt[g]]).var()
         centroids0,labels0=dbscan_find_clusters_3(X_scaled[:,filt[g]]) if l0>thresh_value else ([],[])
-        greater_var_z_than_x.append(True if fl>=0 else False)
+        # greater_var_z_than_x.append(True if fl>=0 else False)
         c.append(centroids0)
         ncl.append(len(centroids0))
         
@@ -434,7 +427,7 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     logger.success(f'Number of lines from mode: {md}')
     
     # Do the same for the x vs z variance relation
-    var_z_x=mode(greater_var_z_than_x)
+    # var_z_x=mode(greater_var_z_than_x)
     
     # Compute the number of empty fragments
     num_empty=np.array([l0<thresh_value for l0 in l]).sum()
@@ -450,10 +443,6 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     finc = completeness[completeness_conds]
     
     logger.success(f'Completeness value: {finc}')
-    
-    end_time2 = time.time()
-    
-    logger.trace(f"Third time {end_time2-start_time2}")
 
     return num_empty, finc[0], md
 
@@ -475,6 +464,7 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
     y_pols = []
     z_pols = []
     params = []
+    metrics_vano = []
     
     logger.info(f"Interquartile filtering prefit")
     # plt.figure(figsize=(12,8))
@@ -486,7 +476,7 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
     
         clus = clean_outliers_2(clus)
         
-        y_pol, z_pol, parametros, metrics = fit_3D_coordinates_2(clus[1,:], clus[2,:], catenaria, p0)
+        y_pol, z_pol, parametros, metrics_cond = fit_3D_coordinates_2(clus[1,:], clus[2,:], catenaria, p0)
         slope, intercept, r_value1, p_value, std_err = linregress(clus[1,:], clus[0,:])
         
         x_pol = slope * y_pol + intercept
@@ -495,6 +485,7 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
         y_pols.append(y_pol)
         z_pols.append(z_pol)
         params.append(parametros)
+        metrics_vano.append(metrics_cond)
         
     #     plt.subplot(2,3,l+1)
     #     plt.scatter(clus[1,:], clus[2,:])
@@ -514,20 +505,20 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
     
     logger.info(f"Evaluating fits")
 
-    resultados_eval = evaluar_ajuste(y_pols, z_pols, rotated_vertices, vano_length, clusters)
+    # resultados_eval = evaluar_ajuste(y_pols, z_pols, rotated_vertices, vano_length, clusters)
     
     pols = [x_pols, y_pols, z_pols]
     
-    return pols, params, resultados_eval, metrics
+    return pols, params, metrics_vano
 
-def puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, vano_length, vano):
+def puntuate_and_save(response_vano, fit1, fit2, fit3, params, metrics, n_conds):
     
     logger.success(f"Saving results")
+    logger.success(f"Setting vano score with new puntuation function")
 
-    if evaluaciones[0] == 0 and evaluaciones[1] == 0 and evaluaciones[2] == 0 and evaluaciones[3] == 0:
-        response_vano['FLAG'] = 'no_vertices'
-        
-    else:
+    response_vano["RECONSTRUCCION"] = "Posible"
+    
+    if response_vano["FLAG"] == "None":
         response_vano["FLAG"] = "good_fit"
         
     response_vano['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
@@ -537,6 +528,6 @@ def puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, van
     response_vano['PARAMETROS(a,h,k)'][str(1)]=params[1]
     response_vano['PARAMETROS(a,h,k)'][str(2)]=params[2]
     
-    response_vano["PUNTUACIONES"]=puntuacion_pol(vano)
+    response_vano["PUNTUACION_POSTERIORI"] = puntuacion_aposteriori(metrics, n_conds)
                         
     return response_vano
