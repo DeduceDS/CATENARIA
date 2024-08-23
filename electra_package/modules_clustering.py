@@ -206,11 +206,13 @@ def dbscan_find_clusters_3(X_scaled):
     """
 
     ar=[5,10,15]
+    best_k = 5
+    
     for k in ar:
         
         # print(X_scaled.shape)
-        # if k > X_scaled.shape[0]:
-        #     continue
+        if k > X_scaled.shape[0]:
+            continue
         
         centroids,labels=group_dbscan_3(k,X_scaled.T)
         if len(np.unique(labels))==1:

@@ -54,32 +54,36 @@ def puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values, 
         long_poli= np.sqrt((cond[1][0]-cond[1][-1])**2 + (cond[2][0]-cond[2][-1])**2)
         diff_2d = abs(long_poli - vano_length)/vano_length
         
-        distancias = [abs(cond[1][i]-cond[1][i+1]) for i in range(1, len(cond[1])-2)]
+        distancias = [np.sqrt((cond[1][i]-cond[1][i+1])**2 + (cond[2][i]-cond[2][i+1])**2) for i in range(0, len(cond[1])-1)]
         
         mean_dist = np.mean(distancias)
         std_dist = np.std(distancias)
         
-        thresh = mean_dist + std_dist
+        thresh = mean_dist + 1.5*std_dist
         # print(np.array(distancias)[np.where(distancias >= thresh)[0]], distancias, thresh)
         
         # plt.hist(distancias)
         # plt.vlines(x= thresh, ymin=0, ymax= 10)
         # plt.show()
         
-        total_huecos = np.sum(np.array(distancias)[np.where(distancias >= thresh)[0]])
+        total_huecos = np.sum(np.array(distancias)[np.where(np.array(distancias)[1:-1] >= thresh)[0]])
         
-        p_huecos = abs(total_huecos - vano_length)/vano_length
+        p_huecos = total_huecos/vano_length
+        
+        logger.trace(f"total_huecos vs vano length: {total_huecos}, {vano_length}")
+        logger.trace(f"Long poli vs vano length: {long_poli}, {vano_length}")
+        logger.trace(f"huecos and diffs: {p_huecos}, {diff_2d}")
         
         if p_huecos + diff_2d >= 1:
             logger.warning(f"Bad error asigned (p_huecos, diff_2d): {p_huecos, diff_2d}")
         
-        nota_cond = 3.33*(1 - p_huecos - diff_2d)
+        nota_cond = 3.33*(1 - p_huecos*0.9 - diff_2d)
         nota += nota_cond
         
         huecos.append(p_huecos)
         huecos.append(diff_2d)
 
-    notas_apriori["P_HUECO"] = p_huecos
+    notas_apriori["P_HUECO"] = huecos
     notas_apriori["DIFF2D"] = diffs
     notas_apriori["NOTA"] = nota
     

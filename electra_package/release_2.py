@@ -36,6 +36,9 @@ def process_vano(vano):
         response_vano["CONFIG_CONDUCTORES"] = "None"
         response_vano["COMPLETITUD"] = "None"
         response_vano["RECONSTRUCCION"] = ""
+        response_vano["PUNTUACION_APRIORI"] = {"P_HUECO": -99, "DIFF2D": -99.0, "NOTA" : -99.0}
+        response_vano["PUNTUACION_APOSTERIORI"] = {"P_VALUE": -99, "CORRELATION": -99.0, "RMSE" : -99.0, "NOTA" : -99.0}
+        
         # response_vano["PORCENTAJE_HUECOS"] = 0
         # response_vano["ERROR_POLILINEA"] = 0
         # response_vano["ERROR_CATENARIA"] = 0
@@ -67,6 +70,8 @@ def process_vano(vano):
         ###############################################
         
         response_vano["PUNTUACION_APRIORI"] = puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values, vano_length)
+        
+        logger.critical(f"Puntuaciones apriori: {response_vano['PUNTUACION_APRIORI']}")
         
         ###############################################
 
@@ -203,7 +208,9 @@ def process_vano(vano):
             logger.success(f"Good clustering with n conductors: {n_conds}")
             logger.info(f"Fitting and evaluating")
         
-            pols, params, metrics = fit_and_evaluate_conds(clusters, scaled_vertices, vano_length)
+            # pols, params, metrics = fit_and_evaluate_conds(clusters, scaled_vertices, vano_length)
+            
+            pols, params, metrics = fit_and_evaluate_conds(scaled_vertices, scaled_vertices, vano_length)
             
             pols = unscale_fits(pols, scaler_x, scaler_y, scaler_z)
             
@@ -211,10 +218,12 @@ def process_vano(vano):
             
             response_vano = puntuate_and_save(response_vano, fit1, fit2, fit3, params, metrics, n_conds)
             
-            # fits = [fit1,fit2,fit3]
+            logger.critical(f"Puntuaciones aposteriori: {response_vano['PUNTUACION_APOSTERIORI']}")
             
-            # plot_data("good fit", cond_values, apoyo_values, fits, extremos_values)
-            # plt.show()
+            fits = [fit1,fit2,fit3]
+            
+            plot_data("good fit", cond_values, apoyo_values, fits, extremos_values)
+            plt.show()
             
             # fits = [np.stack([fit1[0], fit2[0], fit3[0]]), np.stack([fit1[1], fit2[1], fit3[1]]), np.stack([fit1[2], fit2[2], fit3[2]])]
 
@@ -253,7 +262,7 @@ def make_summary(data):
         try:
             row = pd.DataFrame({"ID_VANO" : vano["ID_VANO"], "RECONSTRUCCION" : vano["RECONSTRUCCION"], "FLAG" : vano["FLAG"], "NUM_CONDUCTORES" : vano["NUM_CONDUCTORES"], 
                                 "NUM_CONDUCTORES_FIABLE": vano["NUM_CONDUCTORES_FIABLE"], "CONFIG_CONDUCTORES" : vano["CONFIG_CONDUCTORES"], "COMPLETITUD" : vano["COMPLETITUD"],
-                                "PUNTUACION_APRIORI" : vano["PUNTUACION_APRIORI"], "PUNTUACION_APOSTERIORI": vano["PUNTUACION_APOSTERIORI"]}, index = [i])
+                                "PUNTUACION_APRIORI" : vano["PUNTUACION_APRIORI"]["NOTA"], "PUNTUACION_APOSTERIORI": vano["PUNTUACION_APOSTERIORI"]["NOTA"]}, index = [i])
                 
             summary = pd.concat([summary, row])
             
@@ -298,6 +307,7 @@ def main_pipeline(pathdata0, n_vanos):
             logger.critical(f"\nProcessing Vano {i}")
             
             vano = copy.deepcopy(data[i])
+            idv, vano_length, cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(vano)
             data[i], metrics = process_vano(data[i])
             
             if metrics != -1:
@@ -308,9 +318,10 @@ def main_pipeline(pathdata0, n_vanos):
                     maxes.append(np.mean(metrics[:,1]))
                     correlations.append([np.mean(metrics[:,2]), np.mean(metrics[:,3])])
                     good_cases += 1
+                    # plot_data(str(idv),cond_values, list(apoyo_values), vert_values, extremos_values)
+                    # plt.show()
             else:
                     # logger.error("Bad clustering")
-                    idv, vano_length, cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(vano)
                     plot_data(str(idv),cond_values, list(apoyo_values), vert_values, extremos_values)
                     plt.show()
                     bad_cases += 1

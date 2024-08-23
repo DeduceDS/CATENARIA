@@ -17,12 +17,15 @@ from electra_package.modules_plots import plot_clusters, plot_data
 def analyze_polilinia_values(vert_values, vano_length):
 
     expected_conductor_number = len(vert_values)
+    
+    logger.debug(f"len vert values: {expected_conductor_number}")
 
     empty_poli = 0
 
     for poli in vert_values:
         
-        if len(poli) <= 3:
+        if np.array(poli).shape[1] <= 3:
+            logger.debug(f"Poli with less than 3 points")
             empty_poli += 1
             expected_conductor_number -= 1
             continue
@@ -32,7 +35,7 @@ def analyze_polilinia_values(vert_values, vano_length):
             max = poli[:,np.where(poli[1] == np.max(poli[1]))].flatten()
             min = poli[:,np.where(poli[1] == np.min(poli[1]))].flatten()
             
-            logger.trace(f"Empy polilinia %: {abs(np.linalg.norm(max-min)-vano_length)/vano_length}")
+            logger.debug(f"Empy polilinia %: {abs(np.linalg.norm(max-min)-vano_length)/vano_length}")
             
             if abs(np.linalg.norm(max-min)-vano_length)/vano_length > 10.0:        
                 empty_poli += 1
@@ -41,9 +44,6 @@ def analyze_polilinia_values(vert_values, vano_length):
 
 
 def analyze_backings(vano_length, apoyo_values, extremos_values):
-    
-    # Start the timer
-    start_time1 = time.time()
 
     logger.info(f"Analyzing backings")
     
@@ -66,10 +66,6 @@ def analyze_backings(vano_length, apoyo_values, extremos_values):
     
     # Redefine and compute new extreme values
     extremos_values = define_backings(vano_length,apoyo_values,coord)
-    
-    end_time1 = time.time()
-    
-    logger.trace(f"Second time {end_time1-start_time1}")
     
     # Check for missing LIDAR apoyo points
     # Exception to handle = bad data , correction not possible
@@ -187,20 +183,20 @@ def define_backings(vano_length, apoyo_values, coord):
             else:
                 coord1, coord2 = 0, 2
             
-            plt.figure(figsize=(12,8))
-            plt.subplot(121)
-            plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
-            plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
-            plt.xlabel('X Coordinate')
-            plt.ylabel('Y Coordinate')
-            plt.subplot(122)
-            plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
-            plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
-            plt.xlabel('X Coordinate')
-            plt.ylabel('Z Coordinate')
-            plt.title(f'Custom 1D K-means Clustering for coord {coord}')
+            # plt.figure(figsize=(12,8))
+            # plt.subplot(121)
+            # plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
+            # plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
+            # plt.xlabel('X Coordinate')
+            # plt.ylabel('Y Coordinate')
+            # plt.subplot(122)
+            # plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
+            # plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
+            # plt.xlabel('X Coordinate')
+            # plt.ylabel('Z Coordinate')
+            # plt.title(f'Custom 1D K-means Clustering for coord {coord}')
         
-            plt.show()
+            # plt.show()
             
             return -1
                         
@@ -297,7 +293,7 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
             logger.debug(f"{clust.shape[1],len(labels)}")
             logger.debug(f"break, bad clusters, {max_size, (100/n_conds)}")
             good_clust = False
-            plot_clusters(X_scaled, labels, centroids, coord)
+            # plot_clusters(X_scaled, labels, centroids, coord)
             
             continue
             
@@ -368,7 +364,7 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
 
     if not good_clust:
         logger.warning(f"BAD CLUSTERS AFTER {i} TRIALS")
-        plot_clusters(X_scaled, labels, centroids, coord)
+        # plot_clusters(X_scaled, labels, centroids, coord)
         
     return good_clust, clusters
         
@@ -487,21 +483,21 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
         params.append(parametros)
         metrics_vano.append(metrics_cond)
         
-    #     plt.subplot(2,3,l+1)
-    #     plt.scatter(clus[1,:], clus[2,:])
-    #     plt.scatter(y_pol, z_pol)
+        plt.subplot(2,3,l+1)
+        plt.scatter(clus[1,:], clus[2,:])
+        plt.scatter(y_pol, z_pol)
         
-    #     plt.subplot(2,3,l+4)
-    #     plt.scatter(clus[0,:], clus[1,:])
-    #     plt.scatter(x_pol, y_pol)
+        plt.subplot(2,3,l+4)
+        plt.scatter(clus[0,:], clus[1,:])
+        plt.scatter(x_pol, y_pol)
         
-    #     plt.title(f"Fit for cluster: {l}")
-    #     # logger.debug(f"Min z value, max z value {np.min(z_pol)}, {np.max(z_pol)}")
-    #     logger.debug(f"Min z value, max z value {np.min(clus[2,:])}, {np.max(clus[2,:])}")
-    #     # logger.debug(f"Min y value, max y value {np.min(y_pol)}, {np.max(y_pol)}")
-    #     logger.debug(f"Min y value, max y value {np.min(clus[1,:])}, {np.max(clus[1,:])}")
+        plt.title(f"Fit for cluster: {l}")
+        # # logger.debug(f"Min z value, max z value {np.min(z_pol)}, {np.max(z_pol)}")
+        # logger.debug(f"Min z value, max z value {np.min(clus[2,:])}, {np.max(clus[2,:])}")
+        # # logger.debug(f"Min y value, max y value {np.min(y_pol)}, {np.max(y_pol)}")
+        # logger.debug(f"Min y value, max y value {np.min(clus[1,:])}, {np.max(clus[1,:])}")
     
-    # plt.show()
+    plt.show()
     
     logger.info(f"Evaluating fits")
 
@@ -528,6 +524,6 @@ def puntuate_and_save(response_vano, fit1, fit2, fit3, params, metrics, n_conds)
     response_vano['PARAMETROS(a,h,k)'][str(1)]=params[1]
     response_vano['PARAMETROS(a,h,k)'][str(2)]=params[2]
     
-    response_vano["PUNTUACION_POSTERIORI"] = puntuacion_aposteriori(metrics, n_conds)
+    response_vano["PUNTUACION_APOSTERIORI"] = puntuacion_aposteriori(metrics, n_conds)
                         
     return response_vano

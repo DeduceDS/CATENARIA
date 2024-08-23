@@ -172,7 +172,7 @@ def plot_data(title,cond_values=[], apoyo_values=[], vert_values=[], extremos_va
         for vert in vert_values:
         
             # Agrega el gráfico para los vertices
-            add_plot(fig, vert , "red", 5, "Vertices", "lines")
+            add_plot(fig, vert , "red", 3, "Vertices", "lines")
 
     # Agrega títulos a los ejes
     fig.update_layout(
