@@ -51,7 +51,9 @@ def down_sample_lidar(apoyo_values, cond_values):
 
 def scale_vertices(rotated_vertices, scaler_x, scaler_y, scaler_z):
     
-    scaled_vertices = [np.array([scaler_x.fit_transform(vert[0,:].reshape(-1, 1)), scaler_y.fit_transform(vert[1,:].reshape(-1, 1)), scaler_z.fit_transform(vert[2,:].reshape(-1, 1))]) for vert in rotated_vertices]
+    scaled_vertices = [np.array([scaler_x.fit_transform(vert[0,:].reshape(-1, 1)).flatten()
+                                , scaler_y.fit_transform(vert[1,:].reshape(-1, 1)).flatten(), 
+                                scaler_z.fit_transform(vert[2,:].reshape(-1, 1)).flatten()]) for vert in rotated_vertices]
     return scaled_vertices
 
 def scale_conductor(X):

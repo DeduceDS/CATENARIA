@@ -109,9 +109,9 @@ def unscale_fits(pols, scaler_x, scaler_y, scaler_z):
     
     pols = np.array(pols)
     
-    pols[0, :] = scaler_x.inverse_transform(pols[0, :])
-    pols[1, :] = scaler_y.inverse_transform(pols[1, :])
-    pols[2, :] = scaler_z.inverse_transform(pols[2, :])
+    pols[:, 0, :] = scaler_x.inverse_transform(pols[:, 0, :])
+    pols[:, 1, :] = scaler_y.inverse_transform(pols[:, 1, :])
+    pols[:, 2, :] = scaler_z.inverse_transform(pols[:, 2, :])
 
     return pols
 

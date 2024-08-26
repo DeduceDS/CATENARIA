@@ -41,51 +41,56 @@ def get_metrics(fitted_z_vals_scaled, z_vals_scaled):
 def fit_3D_coordinates_2(y_values, z_values, fit_function, initial_params):
     
     # Reshape and scale z, y coordinates
-    y_vals = y_values.reshape(-1, 1)
-    z_vals = z_values.reshape(-1, 1)
+    # y_vals = y_values.reshape(-1, 1)
+    # z_vals = z_values.reshape(-1, 1)
 
-    scaler_y = StandardScaler()
-    scaler_z = StandardScaler()
+    # scaler_y = StandardScaler()
+    # scaler_z = StandardScaler()
 
-    y_vals_scaled = scaler_y.fit_transform(y_vals).flatten()
-    z_vals_scaled = scaler_z.fit_transform(z_vals).flatten()
+    # y_vals_scaled = scaler_y.fit_transform(y_vals).flatten()
+    # z_vals_scaled = scaler_z.fit_transform(z_vals).flatten()
+    
+    y_vals_scaled = y_values
+    z_vals_scaled = z_values
     
     # Fit curve to data and get the fitted parameters
     parametros, _ = curve_fit(fit_function, y_vals_scaled.flatten(), z_vals_scaled, initial_params)
 
     # With the fitted parameters extract the new corresponding Z coordinate for our Y values.
-    fitted_z_vals_scaled = fit_function(y_vals_scaled.flatten(), *parametros)
-    fitted_z_vals = scaler_z.inverse_transform(fitted_z_vals_scaled.reshape(-1, 1)).flatten()
+    fitted_z_vals = fit_function(y_vals_scaled.flatten(), *parametros)
+    # fitted_z_vals = scaler_z.inverse_transform(fitted_z_vals_scaled.reshape(-1, 1)).flatten()
 
     # Interpolación de la polilínea
     # Generate interpolated y values for plotting
     # Get min and max Y values in the original scale
-    min_y = np.min(scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten())
-    max_y = np.max(scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten())
+    # min_y = np.min(scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten())
+    # max_y = np.max(scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten())
+    
+    min_y = np.min(y_values)
+    max_y = np.max(y_values)
     
     # Uniform array in Y coordinate from min to max
     y_pol = np.linspace(min_y, max_y, 200)
 
     # Standardize the interpolated y values
-    y_pol_scaled = scaler_y.transform(y_pol.reshape(-1, 1)).flatten()
+    # y_pol_scaled = scaler_y.transform(y_pol.reshape(-1, 1)).flatten()
 
     # Calculate the fitted z values for the interpolated y values
-    fitted_z_pol_scaled = fit_function(y_pol_scaled, *parametros)
-    fitted_z_pol = scaler_z.inverse_transform(fitted_z_pol_scaled.reshape(-1, 1)).flatten()
+    fitted_z_pol = fit_function(y_pol, *parametros)
+    # fitted_z_pol = scaler_z.inverse_transform(fitted_z_pol_scaled.reshape(-1, 1)).flatten()
 
     # Interpolate the fitted values to the same length as y_pol for the 3D representation
     # z_pol = np.interp(y_pol, scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten(), fitted_z_vals, period=len(fitted_z_vals))
     
-    RMSE_z, max_z, pearson_z, spearman_z, p_value = get_metrics(fitted_z_vals_scaled, z_vals_scaled)
+    RMSE_z, max_z, pearson_z, spearman_z, p_value = get_metrics(fitted_z_vals, z_values)
     
     return y_pol, fitted_z_pol, parametros, [RMSE_z, max_z, pearson_z, spearman_z, p_value]
 
-
 def stack_unrotate_fits(pols, mat):
-
-    fit1=np.vstack((pols[0][0], pols[1][0], pols[2][0]))
-    fit2=np.vstack((pols[0][1], pols[1][1], pols[2][1]))
-    fit3=np.vstack((pols[0][2], pols[1][2], pols[2][2]))
+    
+    fit1=pols[0,:,:]
+    fit2=pols[1,:,:]
+    fit3=pols[2,:,:]
 
     mat_neg,fit1=un_rotate_points(fit1,mat)
     mat_neg,fit2=un_rotate_points(fit2,mat)

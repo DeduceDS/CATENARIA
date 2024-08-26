@@ -132,7 +132,7 @@ def plot_fit_2(title,cond_values, apoyo_values, vert_values,fit):
     # Muestra el gráfico
     fig.show()
 
-def plot_data(title,cond_values=[], apoyo_values=[], vert_values=[], extremos_values=[]):
+def plot_data(title,cond_values=[], apoyo_values=[], vert_values=[], extremos_values=[], color="red"):
     """
     Create and display a 3D scatter plot with conductors, supports, vertices, and endpoints.
 
@@ -172,7 +172,7 @@ def plot_data(title,cond_values=[], apoyo_values=[], vert_values=[], extremos_va
         for vert in vert_values:
         
             # Agrega el gráfico para los vertices
-            add_plot(fig, vert , "red", 3, "Vertices", "lines")
+            add_plot(fig, vert , color, 3, "Vertices", "markers")
 
     # Agrega títulos a los ejes
     fig.update_layout(

@@ -456,9 +456,7 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
     #         return a + b*x + c*x**2 + d*x**3
     # p0 = [0, 1, 1, 1]
     
-    x_pols = []
-    y_pols = []
-    z_pols = []
+    pols = []
     params = []
     metrics_vano = []
     
@@ -469,17 +467,18 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
         
         x_pol, y_pol, z_pol = [], [], []
         slope, intercept = 0, 0
-    
-        clus = clean_outliers_2(clus)
+        
+        logger.critical(f"{np.max(clus[2,:])}")
+        clus = clean_outliers_2(np.array(clus))
         
         y_pol, z_pol, parametros, metrics_cond = fit_3D_coordinates_2(clus[1,:], clus[2,:], catenaria, p0)
         slope, intercept, r_value1, p_value, std_err = linregress(clus[1,:], clus[0,:])
         
         x_pol = slope * y_pol + intercept
         
-        x_pols.append(x_pol)
-        y_pols.append(y_pol)
-        z_pols.append(z_pol)
+        logger.critical(f"Intercept, slope: {intercept}, {slope}")
+        
+        pols.append([x_pol, y_pol, z_pol])
         params.append(parametros)
         metrics_vano.append(metrics_cond)
         
@@ -488,8 +487,8 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
         plt.scatter(y_pol, z_pol)
         
         plt.subplot(2,3,l+4)
-        plt.scatter(clus[0,:], clus[1,:])
-        plt.scatter(x_pol, y_pol)
+        plt.scatter(clus[1,:], clus[0,:])
+        plt.scatter(y_pol, x_pol)
         
         plt.title(f"Fit for cluster: {l}")
         # # logger.debug(f"Min z value, max z value {np.min(z_pol)}, {np.max(z_pol)}")
@@ -503,9 +502,7 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
 
     # resultados_eval = evaluar_ajuste(y_pols, z_pols, rotated_vertices, vano_length, clusters)
     
-    pols = [x_pols, y_pols, z_pols]
-    
-    return pols, params, metrics_vano
+    return np.array(pols), params, metrics_vano
 
 def puntuate_and_save(response_vano, fit1, fit2, fit3, params, metrics, n_conds):
     
@@ -527,3 +524,5 @@ def puntuate_and_save(response_vano, fit1, fit2, fit3, params, metrics, n_conds)
     response_vano["PUNTUACION_APOSTERIORI"] = puntuacion_aposteriori(metrics, n_conds)
                         
     return response_vano
+
+

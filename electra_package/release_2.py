@@ -4,7 +4,7 @@ import json
 import matplotlib.pyplot as plt
 from loguru import logger
 import time
-from electra_package.modules_preprocess import down_sample_lidar, scale_vertices,scale_conductor, rotate_vano, clean_outliers, clean_outliers_2
+from electra_package.modules_preprocess import down_sample_lidar, scale_vertices,scale_conductor, rotate_vano, clean_outliers, clean_outliers_2, un_rotate_points
 from electra_package.modules_utils import set_logger, unscale_fits, extract_vano_values
 from electra_package.modules_main2 import analyze_backings, analyze_conductor_configuration, cluster_and_evaluate, extract_conductor_config, puntuate_and_save, fit_and_evaluate_conds, analyze_polilinia_values
 from electra_package.modules_fits import stack_unrotate_fits
@@ -100,17 +100,38 @@ def process_vano(vano):
             
             return response_vano, -1
         
-        ###############################################
+        ###############################################  ROTATION ALL POINTS
+        plt.hist(cond_values[0,:], bins = 25)
+        plt.show()
         
         mat, rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
         
         rotated_conds = clean_outliers(rotated_conds, rotated_extremos)
         rotated_conds = clean_outliers_2(rotated_conds)
+        
+        # cond_values = un_rotate_points(rotated_conds, mat)
+        # apoyo_values = un_rotate_points(apoyo_values, mat)
+        
+        # plot_data("", cond_values, apoyo_values, vert_values, extremos_values, "red")
+        # plt.show()
 
         X_scaled,scaler_x,scaler_y,scaler_z = scale_conductor(rotated_conds)
         scaled_vertices = scale_vertices(rotated_vertices, scaler_x,scaler_y,scaler_z)
         
-        ###############################################
+        conds = X_scaled
+        
+        conds[0,:] = scaler_x.inverse_transform(X_scaled[0, :].reshape(-1,1)).flatten()
+        conds[1,:] = scaler_y.inverse_transform(X_scaled[1, :].reshape(-1,1)).flatten()
+        conds[2,:] = scaler_z.inverse_transform(X_scaled[2, :].reshape(-1,1)).flatten()
+    
+        _, conds = un_rotate_points(conds,mat)
+        
+        plt.hist(conds[0,:], bins = 25)
+        plt.show()
+        
+        return 0,0
+
+        ############################################### SCALE CONDS AND POLILINEA
         
         config, max_var = analyze_conductor_configuration(X_scaled)
         num_empty, finc, md = extract_conductor_config(X_scaled, rotated_extremos, rotated_conds)
@@ -140,7 +161,7 @@ def process_vano(vano):
             response_vano['FLAG'] = "bad_configuration" 
             return response_vano, -1
         
-        ###############################################
+        ############################################### CLUSTER POINT CLOUDS
         
         max_conds = 6
         good_clust = False
@@ -194,7 +215,7 @@ def process_vano(vano):
                         good_clust = False
                         break
                     
-        ###############################################
+        ############################################### FIT CLUSTERS
 
         if good_clust and n_conds != 3:
 
@@ -207,23 +228,58 @@ def process_vano(vano):
             
             logger.success(f"Good clustering with n conductors: {n_conds}")
             logger.info(f"Fitting and evaluating")
+            
+            logger.critical(f"Using alternative fitting...")
+            # clusters = scaled_vertices
+            
+            pols, params, metrics = fit_and_evaluate_conds(clusters, scaled_vertices, vano_length)
+            
+            print(pols.shape)
+                
+            pols = unscale_fits(pols, scaler_x, scaler_y, scaler_z)  ############## UNSCALE FITS AND CONDUCTORS
+            
+            conds = X_scaled
+            
+            conds[0,:] = scaler_x.inverse_transform(X_scaled[0, :].reshape(-1,1)).flatten()
+            conds[1,:] = scaler_y.inverse_transform(X_scaled[1, :].reshape(-1,1)).flatten()
+            conds[2,:] = scaler_z.inverse_transform(X_scaled[2, :].reshape(-1,1)).flatten()
         
-            # pols, params, metrics = fit_and_evaluate_conds(clusters, scaled_vertices, vano_length)
-            
-            pols, params, metrics = fit_and_evaluate_conds(scaled_vertices, scaled_vertices, vano_length)
-            
-            pols = unscale_fits(pols, scaler_x, scaler_y, scaler_z)
-            
+            print(pols.shape)
+        
             fit1, fit2, fit3 = stack_unrotate_fits(pols, mat)
+            _, conds = un_rotate_points(conds,mat)
+            
+            plt.hist(conds[0,:], bins = 25)
+            plt.show()
+                
+            plt.hist(fit1[0,:], bins = 25)
+            plt.hist(fit2[0,:], bins = 25)
+            plt.hist(fit3[0,:], bins = 25)
+            plt.show()
+            
+            # fit1, fit2, fit3 = pols[0, :, :], pols[1, :, :], pols[2, :, :]
+            
+            plt.figure(figsize=(12,8))
+            plt.subplot(1,2,1)
+            plt.scatter(fit1[1,:], fit1[2,:], s = 5, color = "red")
+            plt.scatter(fit2[1,:], fit2[2,:], s = 5, color = "blue")
+            plt.scatter(fit3[1,:], fit3[2,:], s = 5, color = "green")
+            plt.subplot(1,2,2)
+            plt.scatter(fit1[1,:], fit1[0,:], s = 5, color = "red")
+            plt.scatter(fit2[1,:], fit2[0,:], s = 5, color = "blue")
+            plt.scatter(fit3[1,:], fit3[0,:], s = 5, color = "green")
+            plt.show()
+            
+            fits = [fit1,fit2,fit3]
+            
+            plot_data("good fit", conds, [], fits, [], "green")
+            plt.show()  
             
             response_vano = puntuate_and_save(response_vano, fit1, fit2, fit3, params, metrics, n_conds)
             
             logger.critical(f"Puntuaciones aposteriori: {response_vano['PUNTUACION_APOSTERIORI']}")
             
-            fits = [fit1,fit2,fit3]
-            
-            plot_data("good fit", cond_values, apoyo_values, fits, extremos_values)
-            plt.show()
+            print(np.max(cond_values[0,:]), np.max(pols[0,0,:]))
             
             # fits = [np.stack([fit1[0], fit2[0], fit3[0]]), np.stack([fit1[1], fit2[1], fit3[1]]), np.stack([fit1[2], fit2[2], fit3[2]])]
 
