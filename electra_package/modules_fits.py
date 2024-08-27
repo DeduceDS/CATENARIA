@@ -38,8 +38,17 @@ def get_metrics(fitted_z_vals_scaled, z_vals_scaled):
     return RMSE_z, max_z, pearson_z, spearman_z, p_value
                         
 
-def fit_3D_coordinates_2(y_values, z_values, fit_function, initial_params):
+def fit_3D_coordinates_2(y_values, z_values, scaled_extremos, fit_function, initial_params):
     
+    top_two = scaled_extremos[:,np.argsort(scaled_extremos[2,:])[-2:]]  # Get the indices of the top two highest z values
+    
+    top_left = top_two[:,np.where(top_two[1,:] == np.min(top_two[1,:]))[0]]
+    top_right = top_two[:,np.where(top_two[1,:] == np.max(top_two[1,:]))[0]]
+    
+    # -------------------------------------------------- #
+    
+    # logger.critical(f"{top_left}, {top_right}")
+        
     # Reshape and scale z, y coordinates
     # y_vals = y_values.reshape(-1, 1)
     # z_vals = z_values.reshape(-1, 1)
@@ -66,8 +75,8 @@ def fit_3D_coordinates_2(y_values, z_values, fit_function, initial_params):
     # min_y = np.min(scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten())
     # max_y = np.max(scaler_y.inverse_transform(y_vals_scaled.reshape(-1, 1)).flatten())
     
-    min_y = np.min(y_values)
-    max_y = np.max(y_values)
+    min_y = np.min(scaled_extremos[1,:])
+    max_y = np.max(scaled_extremos[1,:])
     
     # Uniform array in Y coordinate from min to max
     y_pol = np.linspace(min_y, max_y, 200)

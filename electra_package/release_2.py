@@ -6,7 +6,7 @@ from loguru import logger
 import time
 import copy
 from electra_package.modules_preprocess import down_sample_lidar, scale_vertices,scale_conductor, rotate_vano, clean_outliers, clean_outliers_2, un_rotate_points
-from electra_package.modules_utils import set_logger, unscale_fits, extract_vano_values
+from electra_package.modules_utils import set_logger, unscale_fits, extract_vano_values, look_for_vano
 from electra_package.modules_main2 import analyze_backings, analyze_conductor_configuration, cluster_and_evaluate, extract_conductor_config, puntuate_and_save, fit_and_evaluate_conds, analyze_polilinia_values
 from electra_package.modules_fits import stack_unrotate_fits
 from electra_package.modules_plots import *
@@ -46,15 +46,23 @@ def process_vano(vano):
         
         ###############################################
         
+        response_vano["PUNTUACION_APRIORI"] = puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values, vano_length)
+        
+        logger.critical(f"Puntuaciones apriori: {response_vano['PUNTUACION_APRIORI']}")
+        
+        ###############################################
+        
         empty_pol_num, expected_conds = analyze_polilinia_values(vert_values, vano_length)
         
-        logger.critical(f"Expected conductors from data: {expected_conds}")
-        logger.critical(f"Number of empty lines from data: {empty_pol_num}")
+        logger.warning(f"Expected conductors from data: {expected_conds}")
+        logger.warning(f"Number of empty lines from data: {empty_pol_num}")
         
         if expected_conds > 3:
             
             logger.error(f"3 conductors expected, found {expected_conds}")
             response_vano['FLAG'] = "bad_cond_number"
+            
+            response_vano["PUNTUACION_APRIORI"] = {"P_HUECO": -99, "DIFF2D": -99.0, "NOTA" : -99.0}
             
             return response_vano, -1
         
@@ -68,13 +76,7 @@ def process_vano(vano):
             logger.warning(f"Empty polilinea = {empty_pol_num}")
             response_vano['FLAG'] = "found_empty_polis"
             
-        ###############################################
-        
-        response_vano["PUNTUACION_APRIORI"] = puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values, vano_length)
-        
-        logger.critical(f"Puntuaciones apriori: {response_vano['PUNTUACION_APRIORI']}")
-        
-        ###############################################
+        ################################################
 
         logger.info(f"Downsampling LIDAR to 25%")
         apoyo_values, cond_values = down_sample_lidar(apoyo_values, cond_values)
@@ -102,11 +104,6 @@ def process_vano(vano):
             return response_vano, -1
         
         ###############################################  ROTATION ALL POINTS
-        # plt.hist(cond_values[0,:], bins = 25)
-        # plt.show()
-        
-        plot_data("good fit", cond_values, [], vert_values, [], "green")
-        plt.show() 
         
         mat, rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
         
@@ -116,9 +113,15 @@ def process_vano(vano):
         X_scaled,scaler_x,scaler_y,scaler_z = scale_conductor(rotated_conds)
         scaled_vertices = scale_vertices(rotated_vertices, scaler_x,scaler_y,scaler_z)
         
-        plot_data("good fit", X_scaled, [], scaled_vertices, [], "green")
-        plt.show()
+        x_scaled_extremos = scaler_x.transform(rotated_extremos[0].reshape(-1,1)).flatten()
+        y_scaled_extremos = scaler_y.transform(rotated_extremos[1].reshape(-1,1)).flatten()
+        z_scaled_extremos = scaler_z.transform(rotated_extremos[2].reshape(-1,1)).flatten()
+        
+        scaled_extremos = np.array([x_scaled_extremos, y_scaled_extremos, z_scaled_extremos])
 
+        # plot_data("good fit", X_scaled, [], scaled_vertices, scaled_extremos, "blue")
+        # plt.show() 
+        
         ############################################### SCALE CONDS AND POLILINEA
         
         config, max_var = analyze_conductor_configuration(X_scaled)
@@ -217,12 +220,17 @@ def process_vano(vano):
             logger.success(f"Good clustering with n conductors: {n_conds}")
             logger.info(f"Fitting and evaluating")
             
-            logger.critical(f"Using alternative fitting...")
-            clusters = scaled_vertices
+            ####################################### SELECT ALTERNATIVE FITTING
+            # alternative_fitting = True
             
-            pols, params, metrics = fit_and_evaluate_conds(clusters, scaled_vertices, vano_length)
+            # if alternative_fitting:
             
-            print(pols.shape)
+            #     logger.critical(f"Using alternative fitting...")
+            #     clusters = scaled_vertices
+                
+            ####################################### 
+            
+            pols, params, metrics = fit_and_evaluate_conds(clusters, scaled_extremos)
                 
             pols = unscale_fits(pols, scaler_x, scaler_y, scaler_z)  ############## UNSCALE FITS AND CONDUCTORS
             
@@ -231,8 +239,6 @@ def process_vano(vano):
             conds[0,:] = scaler_x.inverse_transform(X_scaled[0, :].reshape(-1,1)).flatten()
             conds[1,:] = scaler_y.inverse_transform(X_scaled[1, :].reshape(-1,1)).flatten()
             conds[2,:] = scaler_z.inverse_transform(X_scaled[2, :].reshape(-1,1)).flatten()
-        
-            print(pols.shape)
         
             fit1, fit2, fit3 = stack_unrotate_fits(pols, mat)
             _, conds = un_rotate_points(conds,mat)
@@ -245,43 +251,28 @@ def process_vano(vano):
             # plt.hist(fit3[0,:], bins = 25)
             # plt.show()
             
-            # fit1, fit2, fit3 = pols[0, :, :], pols[1, :, :], pols[2, :, :]
-            
-            plt.figure(figsize=(12,8))
-            plt.subplot(1,2,1)
-            plt.scatter(fit1[1,:], fit1[2,:], s = 5, color = "red")
-            plt.scatter(fit2[1,:], fit2[2,:], s = 5, color = "blue")
-            plt.scatter(fit3[1,:], fit3[2,:], s = 5, color = "green")
-            plt.subplot(1,2,2)
-            plt.scatter(fit1[1,:], fit1[0,:], s = 5, color = "red")
-            plt.scatter(fit2[1,:], fit2[0,:], s = 5, color = "blue")
-            plt.scatter(fit3[1,:], fit3[0,:], s = 5, color = "green")
-            plt.show()
+            # plt.figure(figsize=(12,8))
+            # plt.subplot(1,2,1)
+            # plt.scatter(fit1[1,:], fit1[2,:], s = 5, color = "red")
+            # plt.scatter(fit2[1,:], fit2[2,:], s = 5, color = "blue")
+            # plt.scatter(fit3[1,:], fit3[2,:], s = 5, color = "green")
+            # plt.subplot(1,2,2)
+            # plt.scatter(fit1[1,:], fit1[0,:], s = 5, color = "red")
+            # plt.scatter(fit2[1,:], fit2[0,:], s = 5, color = "blue")
+            # plt.scatter(fit3[1,:], fit3[0,:], s = 5, color = "green")
+            # plt.show()
             
             fits = [fit1,fit2,fit3]
             
-            plot_data("good fit", conds, [], fits, [], "green")
-            plt.show()  
+            plot_data("good fit", cond_values, apoyo_values, fits, extremos_values, "green")
+            plt.show()
+            
+            plot_data("good fit", cond_values, apoyo_values, vert_values, extremos_values, "red")
+            plt.show()    
             
             response_vano = puntuate_and_save(response_vano, fit1, fit2, fit3, params, metrics, n_conds)
             
             logger.critical(f"Puntuaciones aposteriori: {response_vano['PUNTUACION_APOSTERIORI']}")
-            
-            print(np.max(cond_values[0,:]), np.max(pols[0,0,:]))
-            
-            # fits = [np.stack([fit1[0], fit2[0], fit3[0]]), np.stack([fit1[1], fit2[1], fit3[1]]), np.stack([fit1[2], fit2[2], fit3[2]])]
-
-            # plot_fit_2("good fit", cond_values, apoyo_values, vert_values, fits)
-            # fits = [fit3]
-            # # print(np.stack(fits).shape)
-            # # plot_data("good fit", cond_values, apoyo_values, fits, extremos_values)
-            # # plt.show()
-            # fits = [fit2]
-            # print(np.stack(fits).shape)
-            # plot_data("good fit", cond_values, apoyo_values, fits, extremos_values)
-            # plt.show()
-            
-            # logger.critical(f"{np.array(pols[0]).mean(), np.array(pols[1]).mean(), np.array(pols[2]).mean()}")
             
             return response_vano, metrics
             
@@ -406,3 +397,21 @@ def main_pipeline(pathdata0, n_vanos):
     logger.success(summary.to_string())
         
     return data[:n_vanos], summary
+
+
+import copy
+
+def testing_pipeline(data,vanos_id):
+    
+    set_logger("INFO")
+
+    for id in vanos_id:
+        
+        i, vano = look_for_vano(data, id)
+        idv, vano_length, cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(vano)
+
+        response_vano, metrics = process_vano(vano)
+
+        # plot_data("", cond_values, apoyo_values, vert_values, extremos_values, "red")
+        # plt.show()
+        

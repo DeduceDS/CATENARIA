@@ -443,7 +443,7 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     return num_empty, finc[0], md
 
 
-def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
+def fit_and_evaluate_conds(clusters, scaled_extremos):
     
     logger.info(f"Fitting with catenaria function")
     
@@ -468,15 +468,14 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
         x_pol, y_pol, z_pol = [], [], []
         slope, intercept = 0, 0
         
-        logger.critical(f"{np.max(clus[2,:])}")
         clus = clean_outliers_2(np.array(clus))
         
-        y_pol, z_pol, parametros, metrics_cond = fit_3D_coordinates_2(clus[1,:], clus[2,:], catenaria, p0)
+        y_pol, z_pol, parametros, metrics_cond = fit_3D_coordinates_2(clus[1,:], clus[2,:], scaled_extremos, catenaria, p0)
         slope, intercept, r_value1, p_value, std_err = linregress(clus[1,:], clus[0,:])
         
         x_pol = slope * y_pol + intercept
         
-        logger.critical(f"Intercept, slope: {intercept}, {slope}")
+        logger.debug(f"Intercept, slope: {intercept}, {slope}")
         
         pols.append([x_pol, y_pol, z_pol])
         params.append(parametros)
@@ -485,10 +484,12 @@ def fit_and_evaluate_conds(clusters, rotated_vertices, vano_length):
         plt.subplot(2,3,l+1)
         plt.scatter(clus[1,:], clus[2,:])
         plt.scatter(y_pol, z_pol)
+        plt.scatter(scaled_extremos[1,:], scaled_extremos[2,:])
         
         plt.subplot(2,3,l+4)
         plt.scatter(clus[1,:], clus[0,:])
         plt.scatter(y_pol, x_pol)
+        plt.scatter(scaled_extremos[1,:], scaled_extremos[0,:])
         
         plt.title(f"Fit for cluster: {l}")
         # # logger.debug(f"Min z value, max z value {np.min(z_pol)}, {np.max(z_pol)}")
