@@ -51,9 +51,9 @@ def down_sample_lidar(apoyo_values, cond_values):
 
 def scale_vertices(rotated_vertices, scaler_x, scaler_y, scaler_z):
     
-    scaled_vertices = [np.array([scaler_x.fit_transform(vert[0,:].reshape(-1, 1)).flatten()
-                                , scaler_y.fit_transform(vert[1,:].reshape(-1, 1)).flatten(), 
-                                scaler_z.fit_transform(vert[2,:].reshape(-1, 1)).flatten()]) for vert in rotated_vertices]
+    scaled_vertices = [np.array([scaler_x.transform(vert[0,:].reshape(-1, 1)).flatten()
+                                , scaler_y.transform(vert[1,:].reshape(-1, 1)).flatten(), 
+                                scaler_z.transform(vert[2,:].reshape(-1, 1)).flatten()]) for vert in rotated_vertices]
     return scaled_vertices
 
 def scale_conductor(X):
@@ -96,7 +96,7 @@ def rotate_points(points, extremos_values):
     tuple: The rotation matrix and the rotated points.
     """
 
-    points = np.array(points).T
+    points = np.array(points)
 
     extremo1 = np.array(extremos_values).T[0]  # Extremo superior del primer poste
     extremo2 = np.array(extremos_values).T[2]  # Extremo inferior del primer poste
@@ -118,7 +118,7 @@ def rotate_points(points, extremos_values):
                                 [-s, c, 0],
                                 [0, 0, 1]])
 
-    rotated_points = matriz_rotacion.dot(points.T)
+    rotated_points = matriz_rotacion.dot(points)
     # print(rotated.shape)
 
     return matriz_rotacion, np.array(rotated_points)
@@ -159,9 +159,9 @@ def rotate_vano(cond_values, extremos_values, apoyo_values, vert_values):
     """
     
     logger.info(f"Rotating vano")
+    
     # Rotate and compare
     mat, rotated_conds = rotate_points(cond_values, extremos_values)
-
     rotated_apoyos = mat.dot(apoyo_values)
     rotated_extremos = mat.dot(extremos_values)
     rotated_vertices = [mat.dot(vert) for vert in vert_values]

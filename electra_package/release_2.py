@@ -4,6 +4,7 @@ import json
 import matplotlib.pyplot as plt
 from loguru import logger
 import time
+import copy
 from electra_package.modules_preprocess import down_sample_lidar, scale_vertices,scale_conductor, rotate_vano, clean_outliers, clean_outliers_2, un_rotate_points
 from electra_package.modules_utils import set_logger, unscale_fits, extract_vano_values
 from electra_package.modules_main2 import analyze_backings, analyze_conductor_configuration, cluster_and_evaluate, extract_conductor_config, puntuate_and_save, fit_and_evaluate_conds, analyze_polilinia_values
@@ -101,35 +102,22 @@ def process_vano(vano):
             return response_vano, -1
         
         ###############################################  ROTATION ALL POINTS
-        plt.hist(cond_values[0,:], bins = 25)
-        plt.show()
+        # plt.hist(cond_values[0,:], bins = 25)
+        # plt.show()
+        
+        plot_data("good fit", cond_values, [], vert_values, [], "green")
+        plt.show() 
         
         mat, rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
         
         rotated_conds = clean_outliers(rotated_conds, rotated_extremos)
         rotated_conds = clean_outliers_2(rotated_conds)
-        
-        # cond_values = un_rotate_points(rotated_conds, mat)
-        # apoyo_values = un_rotate_points(apoyo_values, mat)
-        
-        # plot_data("", cond_values, apoyo_values, vert_values, extremos_values, "red")
-        # plt.show()
 
         X_scaled,scaler_x,scaler_y,scaler_z = scale_conductor(rotated_conds)
         scaled_vertices = scale_vertices(rotated_vertices, scaler_x,scaler_y,scaler_z)
         
-        conds = X_scaled
-        
-        conds[0,:] = scaler_x.inverse_transform(X_scaled[0, :].reshape(-1,1)).flatten()
-        conds[1,:] = scaler_y.inverse_transform(X_scaled[1, :].reshape(-1,1)).flatten()
-        conds[2,:] = scaler_z.inverse_transform(X_scaled[2, :].reshape(-1,1)).flatten()
-    
-        _, conds = un_rotate_points(conds,mat)
-        
-        plt.hist(conds[0,:], bins = 25)
+        plot_data("good fit", X_scaled, [], scaled_vertices, [], "green")
         plt.show()
-        
-        return 0,0
 
         ############################################### SCALE CONDS AND POLILINEA
         
@@ -230,7 +218,7 @@ def process_vano(vano):
             logger.info(f"Fitting and evaluating")
             
             logger.critical(f"Using alternative fitting...")
-            # clusters = scaled_vertices
+            clusters = scaled_vertices
             
             pols, params, metrics = fit_and_evaluate_conds(clusters, scaled_vertices, vano_length)
             
@@ -249,13 +237,13 @@ def process_vano(vano):
             fit1, fit2, fit3 = stack_unrotate_fits(pols, mat)
             _, conds = un_rotate_points(conds,mat)
             
-            plt.hist(conds[0,:], bins = 25)
-            plt.show()
+            # plt.hist(conds[0,:], bins = 25)
+            # plt.show()
                 
-            plt.hist(fit1[0,:], bins = 25)
-            plt.hist(fit2[0,:], bins = 25)
-            plt.hist(fit3[0,:], bins = 25)
-            plt.show()
+            # plt.hist(fit1[0,:], bins = 25)
+            # plt.hist(fit2[0,:], bins = 25)
+            # plt.hist(fit3[0,:], bins = 25)
+            # plt.show()
             
             # fit1, fit2, fit3 = pols[0, :, :], pols[1, :, :], pols[2, :, :]
             
