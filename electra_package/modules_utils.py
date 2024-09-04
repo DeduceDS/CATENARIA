@@ -65,8 +65,15 @@ def get_coord2(extremos_apoyos):
     for i in range(len(extremos_apoyos)):
 
         x_vals = x_vals + [extremos_apoyos[i]["COORDENADA_X"], extremos_apoyos[i]["COORDENADA_X"]]
-        y_vals = y_vals + [extremos_apoyos[i]["COORDEANDA_Y"], extremos_apoyos[i]["COORDEANDA_Y"]]
-
+        
+        for key in ["COORDENADA_Y", "COORDEANDA_Y"]:
+            
+            try:
+                y_vals = y_vals + [extremos_apoyos[i][key], extremos_apoyos[i][key]]
+                
+            except Exception as e:
+                pass
+    print(y_vals)
     return np.stack(x_vals), np.stack(y_vals), np.stack(z_vals)
 
 def extract_vano_values(vano):

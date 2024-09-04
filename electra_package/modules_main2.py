@@ -14,33 +14,59 @@ from electra_package.puntuacionparavano import puntuacion_aposteriori
 from electra_package.modules_plots import plot_clusters, plot_data
 
 
-def analyze_polilinia_values(vert_values, vano_length):
-
-    expected_conductor_number = len(vert_values)
+def analyze_polilinia_values(vert_values, cond_values, vano_length):
     
-    logger.debug(f"len vert values: {expected_conductor_number}")
-
+    initial_conductor_number = len(vert_values)
+    logger.critical(f"len initial vert values: {initial_conductor_number}")
     empty_poli = 0
+    not_empty = []
 
     for poli in vert_values:
         
-        if np.array(poli).shape[1] <= 3:
-            logger.debug(f"Poli with less than 3 points")
-            empty_poli += 1
-            expected_conductor_number -= 1
-            continue
+        max_pos = poli[:,np.where(poli[1] == np.max(poli[1]))].flatten()
+        min_pos = poli[:,np.where(poli[1] == np.min(poli[1]))].flatten()
         
+        if np.array(poli).shape[1] <= 3:
+            logger.warning(f"Poli with less than 3 points")
+            empty_poli += 1
+        
+        elif 100*abs(np.linalg.norm(max_pos-min_pos)-vano_length)/vano_length > 85.0:
+            
+            logger.warning(f"Empy polilinia %: {abs(np.linalg.norm(max_pos-min_pos)-vano_length)/vano_length}")
+            empty_poli += 1
+            
         else:
+            not_empty.append(poli)
             
-            max = poli[:,np.where(poli[1] == np.max(poli[1]))].flatten()
-            min = poli[:,np.where(poli[1] == np.min(poli[1]))].flatten()
-            
-            logger.debug(f"Empy polilinia %: {abs(np.linalg.norm(max-min)-vano_length)/vano_length}")
-            
-            if abs(np.linalg.norm(max-min)-vano_length)/vano_length > 10.0:        
-                empty_poli += 1
-            
-    return empty_poli, expected_conductor_number
+    if not_empty == []:
+        return initial_conductor_number, 0, empty_poli
+        
+    X_scaled,scaler_x,scaler_y,scaler_z = scale_conductor(cond_values)
+    max_vars = []
+    
+    for poli in not_empty:
+        
+        x_vals_scaled = scaler_x.transform(np.array(poli)[0,:].reshape(-1, 1)).flatten()  # Flatten per curve_fit
+        y_vals_scaled = scaler_y.transform(np.array(poli)[1,:].reshape(-1, 1)).flatten()
+        z_vals_scaled = scaler_z.transform(np.array(poli)[2,:].reshape(-1, 1)).flatten()
+        
+        variances = [np.std(x_vals_scaled), np.std(y_vals_scaled), np.std(z_vals_scaled)]
+        # logger.critical(f"variances: {variances}")
+        max_var = np.argmax(variances)
+        
+        max_vars.append(max_var)
+        # print([x_vals_scaled, y_vals_scaled, z_vals_scaled])
+        
+    logger.critical(f"max variances: {max_vars}")
+    
+    main_coord = mode(max_vars)
+    
+    vert_values = [vert for i,vert in enumerate(not_empty) if max_vars[i] == main_coord]
+    
+    logger.critical(f"number of consistent vert values: {len(vert_values)}, max variance {main_coord}")
+    expected_conductor_number = len(vert_values)
+
+    return initial_conductor_number, expected_conductor_number, empty_poli
 
 
 def analyze_backings(vano_length, apoyo_values, extremos_values):
@@ -211,7 +237,7 @@ def define_backings(vano_length, apoyo_values, coord):
 
 def analyze_conductor_configuration(X_scaled):
     
-    logger.info(f"Analyzing conductor configuration 2")
+    logger.info(f"Analyzing conductor configuration (1)")
     
     a1,b1 = np.histogram(X_scaled[0,:]/np.max(X_scaled[0,:]), bins=5)
     a2,b2 = np.histogram(X_scaled[1,:]/np.max(X_scaled[1,:]), bins=5)
@@ -221,22 +247,25 @@ def analyze_conductor_configuration(X_scaled):
     normalized_a2 = a2/np.max(a2)
     normalized_a3 = a3/np.max(a3)
     
-    vars = [np.std(normalized_a1), np.std(normalized_a2), np.std(normalized_a3)]
+    variances = [np.std(normalized_a1), np.std(normalized_a2), np.std(normalized_a3)]
+    # variances = [np.std(X_scaled[0,:]), np.std(X_scaled[1,:]), np.std(X_scaled[2,:])]
     
-    max_var = np.argmax(vars)
-    min_var = np.argmin(vars)
+    logger.critical(f"variances {variances}")
     
-    cond1 = np.abs(np.max(normalized_a1)-np.min(normalized_a1)) > np.abs(np.max(normalized_a2)-np.min(normalized_a2))
-    cond2 = np.abs(np.max(normalized_a3)-np.min(normalized_a3)) > np.abs(np.max(normalized_a2)-np.min(normalized_a2))
+    max_var = np.argmax(variances)
+    min_var = np.argmin(variances)
+    
+    cond1 = np.abs(np.max(normalized_a1)-np.min(normalized_a1)) > 0.8*np.abs(np.max(normalized_a2)-np.min(normalized_a2))
+    cond2 = np.abs(np.max(normalized_a3)-np.min(normalized_a3)) > 0.8*np.abs(np.max(normalized_a2)-np.min(normalized_a2))
     
     cond3 = (max_var == 0)
     cond4 = (max_var == 2)
     
     # cond5 = (min_var/max_var < 0.5)
     
-    logger.debug(f"Conductor variances {np.std(normalized_a1)} ,{np.std(normalized_a2)}, {np.std(normalized_a3)}")
+    logger.debug(f"Conductor variances {variances}")
     logger.debug(f"Histogram and variance conditions (x,z) {cond1,cond3}, {cond2,cond4}")
-    logger.trace(f"Horizontal condition {np.abs(np.max(normalized_a1)-np.min(normalized_a1))} , {np.abs(np.max(normalized_a2)-np.min(normalized_a2))}, {np.abs(np.max(normalized_a3)-np.min(normalized_a3))}")
+    logger.debug(f"Horizontal condition {np.abs(np.max(normalized_a1)-np.min(normalized_a1))} , {np.abs(np.max(normalized_a2)-np.min(normalized_a2))}, {np.abs(np.max(normalized_a3)-np.min(normalized_a3))}")
     
     logger.success(f"Max var coordinate for conductors {max_var}")
 
@@ -247,6 +276,7 @@ def analyze_conductor_configuration(X_scaled):
             
     else:
             logger.warning("Other geometry")
+            logger.warning(f"variances {variances}")
             
             # plt.figure(figsize=(12,8))
             # plt.hist(X_scaled[0,:], bins = 5, label = "x", alpha = 0.5)
@@ -264,7 +294,7 @@ def analyze_conductor_configuration(X_scaled):
             
             else:
                 logger.warning(f"Unrecognized geometry: variances {np.std(normalized_a1), np.std(normalized_a2), np.std(normalized_a3)}")
-                return 0, 0
+                return -1, -1
     
             
 def cluster_and_evaluate(X_scaled, n_conds, coord):
@@ -374,7 +404,7 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     # Conductor geometry/configuration analysis
     # Let's study and categorize this vano in terms of it's conductors
     
-    logger.info(f"Analyzing conductor configuration 1")
+    logger.info(f"Analyzing conductor configuration (2)")
     
     # Find clusters in 10 cloud of points corresponding to 3 positions in y axis
     # Define boundaries of the conductor to extract min, max values and length
@@ -384,6 +414,7 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     
     thresh_value = X_scaled.shape[1]/20
     
+    logger.critical(f"Using thresh value: {thresh_value}")
     # Filter and extract 10 10% length segments
 
     l=[] #Fragment values
@@ -402,7 +433,7 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     # If the variance in z is greater than x then append this result
     
     c=[] # Centroid values resulting from clustering
-    # greater_var_z_than_x=[] # Bool list with x vs z variance relation
+    max_vars = [] 
     ncl=[] # Number of centroids from clustering
 
     for g in range(0,k):
@@ -410,11 +441,20 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
         l0=X_scaled[:,filt[g]].shape[1]
         # fl=pd.Series(X_scaled[2,filt[g]]).var()-pd.Series(X_scaled[0,filt[g]]).var()
         centroids0,labels0=dbscan_find_clusters_3(X_scaled[:,filt[g]]) if l0>thresh_value else ([],[])
-        # greater_var_z_than_x.append(True if fl>=0 else False)
+        # config, max_var = analyze_conductor_configuration(X_scaled[:,filt[g]])
+        max_var = np.argmax([np.std(X_scaled[0,filt[g]]), np.std(X_scaled[1,filt[g]]), np.std(X_scaled[2,filt[g]])])
         c.append(centroids0)
         ncl.append(len(centroids0))
+        max_vars.append(max_var)
         
-    logger.debug(f"{ncl}, {centroids0}")
+    logger.debug(f"{ncl}, {centroids0}, {max_vars}")
+    
+    ##########################################
+    # Obtain the mode of n_clusters along the list of size 10 == number of conductors
+    mvar = mode(max_vars)
+    
+    logger.critical(f'Variances: {max_vars}')
+    logger.critical(f'Max variance from mode: {mvar}')
         
     ##########################################
     # Obtain the mode of n_clusters along the list of size 10 == number of conductors
@@ -440,7 +480,7 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     
     logger.success(f'Completeness value: {finc}')
 
-    return num_empty, finc[0], md
+    return num_empty, finc[0], md, mvar
 
 
 def fit_and_evaluate_conds(clusters, scaled_extremos):
@@ -481,17 +521,17 @@ def fit_and_evaluate_conds(clusters, scaled_extremos):
         params.append(parametros)
         metrics_vano.append(metrics_cond)
         
-        plt.subplot(2,3,l+1)
-        plt.scatter(clus[1,:], clus[2,:])
-        plt.scatter(y_pol, z_pol)
-        plt.scatter(scaled_extremos[1,:], scaled_extremos[2,:])
+        # plt.subplot(2,3,l+1)
+        # plt.scatter(clus[1,:], clus[2,:])
+        # plt.scatter(y_pol, z_pol)
+        # plt.scatter(scaled_extremos[1,:], scaled_extremos[2,:])
         
-        plt.subplot(2,3,l+4)
-        plt.scatter(clus[1,:], clus[0,:])
-        plt.scatter(y_pol, x_pol)
-        plt.scatter(scaled_extremos[1,:], scaled_extremos[0,:])
+        # plt.subplot(2,3,l+4)
+        # plt.scatter(clus[1,:], clus[0,:])
+        # plt.scatter(y_pol, x_pol)
+        # plt.scatter(scaled_extremos[1,:], scaled_extremos[0,:])
         
-        plt.title(f"Fit for cluster: {l}")
+        # plt.title(f"Fit for cluster: {l}")
         # # logger.debug(f"Min z value, max z value {np.min(z_pol)}, {np.max(z_pol)}")
         # logger.debug(f"Min z value, max z value {np.min(clus[2,:])}, {np.max(clus[2,:])}")
         # # logger.debug(f"Min y value, max y value {np.min(y_pol)}, {np.max(y_pol)}")
@@ -522,7 +562,7 @@ def puntuate_and_save(response_vano, fit1, fit2, fit3, params, metrics, n_conds)
     response_vano['PARAMETROS(a,h,k)'][str(1)]=params[1]
     response_vano['PARAMETROS(a,h,k)'][str(2)]=params[2]
     
-    response_vano["PUNTUACION_APOSTERIORI"] = puntuacion_aposteriori(metrics, n_conds)
+    # response_vano["PUNTUACION_APOSTERIORI"] = puntuacion_aposteriori(metrics, n_conds)
                         
     return response_vano
 

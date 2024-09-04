@@ -77,12 +77,14 @@ def puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values, 
         if p_huecos + diff_2d >= 1:
             logger.warning(f"Bad error asigned (p_huecos, diff_2d): {p_huecos, diff_2d}")
         
-        nota_cond = 3.33*(1 - p_huecos*0.9 - diff_2d)
+        nota_cond = 3.33*(1 - p_huecos - diff_2d)
         nota += nota_cond
         
         huecos.append(p_huecos)
-        huecos.append(diff_2d)
+        diffs.append(diff_2d)
 
+    if nota > 10.0: nota = 10.0
+    
     notas_apriori["P_HUECO"] = huecos
     notas_apriori["DIFF2D"] = diffs
     notas_apriori["NOTA"] = nota

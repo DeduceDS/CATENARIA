@@ -38,7 +38,7 @@ def process_vano(vano):
         response_vano["COMPLETITUD"] = "None"
         response_vano["RECONSTRUCCION"] = ""
         response_vano["PUNTUACION_APRIORI"] = {"P_HUECO": -99, "DIFF2D": -99.0, "NOTA" : -99.0}
-        response_vano["PUNTUACION_APOSTERIORI"] = {"P_VALUE": -99, "CORRELATION": -99.0, "RMSE" : -99.0, "NOTA" : -99.0}
+        # response_vano["PUNTUACION_APOSTERIORI"] = {"P_VALUE": -99, "CORRELATION": -99.0, "RMSE" : -99.0, "NOTA" : -99.0}
         
         # response_vano["PORCENTAJE_HUECOS"] = 0
         # response_vano["ERROR_POLILINEA"] = 0
@@ -48,38 +48,41 @@ def process_vano(vano):
         
         response_vano["PUNTUACION_APRIORI"] = puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values, vano_length)
         
-        logger.critical(f"Puntuaciones apriori: {response_vano['PUNTUACION_APRIORI']}")
-        
+        if response_vano["PUNTUACION_APRIORI"] == {"P_HUECO": -99, "DIFF2D": -99.0, "NOTA" : -99.0}:
+            response_vano['FLAG'] = 'bad_backings'
         ###############################################
         
-        empty_pol_num, expected_conds = analyze_polilinia_values(vert_values, vano_length)
+        # mat, rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
+        initial_conductor_number, expected_conductor_number, empty_poli = analyze_polilinia_values(vert_values, cond_values, vano_length)
         
-        logger.warning(f"Expected conductors from data: {expected_conds}")
-        logger.warning(f"Number of empty lines from data: {empty_pol_num}")
+        logger.info(f"Expected conductors from data: {initial_conductor_number - empty_poli}")
+        logger.info(f"Number of empty lines from data: {empty_poli}")
         
-        if expected_conds > 3:
+        if initial_conductor_number - empty_poli > 3 and expected_conductor_number != 3: # TWO CONDITIONS FOR POLILINEAS
             
-            logger.error(f"3 conductors expected, found {expected_conds}")
+            logger.error(f"3 conductors expected, found {initial_conductor_number - empty_poli}")
             response_vano['FLAG'] = "bad_cond_number"
             
             response_vano["PUNTUACION_APRIORI"] = {"P_HUECO": -99, "DIFF2D": -99.0, "NOTA" : -99.0}
             
             return response_vano, -1
         
-        elif expected_conds == 0:
+        elif initial_conductor_number - empty_poli == 0:
             
             logger.warning("No polilineas...")
             response_vano['FLAG'] = "no_polilineas"
             
-        elif empty_pol_num != 0:
+        elif empty_poli != 0:
             
-            logger.warning(f"Empty polilinea = {empty_pol_num}")
+            # logger.warning(f"Empty polilinea = {empty_pol_num}")
             response_vano['FLAG'] = "found_empty_polis"
             
         ################################################
+        
+        logger.critical(f"Puntuaciones apriori: {response_vano['PUNTUACION_APRIORI']}")
 
-        logger.info(f"Downsampling LIDAR to 25%")
-        apoyo_values, cond_values = down_sample_lidar(apoyo_values, cond_values)
+        # logger.info(f"Downsampling LIDAR to 25%")
+        # apoyo_values, cond_values = down_sample_lidar(apoyo_values, cond_values)
 
         logger.info(f"Backings cloud shape: {apoyo_values.shape}, Conductor cloud shape: {cond_values.shape}")
         
@@ -87,6 +90,8 @@ def process_vano(vano):
         
             logger.error("Empty point cloud")
             response_vano['FLAG'] = 'empty_cloud'
+            
+            # response_vano["PUNTUACION_APRIORI"] = {"P_HUECO": -99, "DIFF2D": -99.0, "NOTA" : -99.0}
             
             return response_vano, -1
         
@@ -100,6 +105,8 @@ def process_vano(vano):
             # Set the line value of this element as 0 ****
             logger.error(f"Bad backings")
             response_vano['FLAG'] = 'bad_backings'
+            
+            # response_vano["PUNTUACION_APRIORI"] = {"P_HUECO": -99, "DIFF2D": -99.0, "NOTA" : -99.0}
             
             return response_vano, -1
         
@@ -123,14 +130,39 @@ def process_vano(vano):
         # plt.show() 
         
         ############################################### SCALE CONDS AND POLILINEA
-        
+        print(X_scaled.shape)
         config, max_var = analyze_conductor_configuration(X_scaled)
-        num_empty, finc, md = extract_conductor_config(X_scaled, rotated_extremos, rotated_conds)
+        num_empty, finc, md, mvar = extract_conductor_config(X_scaled, rotated_extremos, rotated_conds)
         
         response_vano["CONFIG_CONDUCTORES"] = config
         response_vano["COMPLETITUD"] = finc
-        response_vano["PORCENTAJE_HUECOS"] = + num_empty*10
+        response_vano["PORCENTAJE_HUECOS"] = num_empty*10
         response_vano['NUM_CONDUCTORES'] = md
+        
+        logger.critical(f"Max var 1, max var 2: {max_var}, {mvar}")
+        
+        if max_var == mvar: 
+            logger.critical("Confirmed config")
+            coord = max_var
+        
+        elif config == 0:
+            coord = 0
+            
+        elif config == 1:
+            coord = 2
+            
+        elif max_var not in [1,-1]:
+            coord = max_var
+            if coord == 2:
+                config = 1
+            else:
+                config = 0
+                    
+        else:
+            logger.error(f"Bad config")
+            response_vano['FLAG'] = "bad_configuration" 
+            return response_vano, -1
+        
         
         if finc == "incomplete" or (md == 0 and finc != "full"):
             
@@ -138,23 +170,10 @@ def process_vano(vano):
             response_vano['FLAG'] = "empty_conductor"
 
             return response_vano, -1
-            
-                
-        if config == 0:
-            coord = 0
-            
-        elif config == 1:
-            coord = 2
-                    
-        else:
-            
-            logger.error(f"Bad config")
-            response_vano['FLAG'] = "bad_configuration" 
-            return response_vano, -1
         
         ############################################### CLUSTER POINT CLOUDS
         
-        max_conds = 6
+        max_conds = 4
         good_clust = False
         n_conds = 3
         
@@ -174,7 +193,7 @@ def process_vano(vano):
                         
             for n_conds in range(3,max_conds):
                 
-                logger.success(f"Kmeans clustering for {n_conds} clusters")
+                logger.success(f"Kmeans clustering for {n_conds} clusters config {p}")
                 
                 good_clust, clusters = cluster_and_evaluate(X_scaled, n_conds, coord)
                 
@@ -198,7 +217,7 @@ def process_vano(vano):
                         logger.warning("Vertical clustering cond number not confirmed")
                         break
                     
-                    elif n_conds < 3:
+                    elif n_conds != 3:
                         good_clust = False
                         continue
                     
@@ -264,15 +283,15 @@ def process_vano(vano):
             
             fits = [fit1,fit2,fit3]
             
-            plot_data("good fit", cond_values, apoyo_values, fits, extremos_values, "green")
+            plot_data("Deduce", cond_values, apoyo_values, fits, extremos_values, "green")
             plt.show()
             
-            plot_data("good fit", cond_values, apoyo_values, vert_values, extremos_values, "red")
+            plot_data("CIC", cond_values, apoyo_values, vert_values, extremos_values, "red")
             plt.show()    
             
             response_vano = puntuate_and_save(response_vano, fit1, fit2, fit3, params, metrics, n_conds)
             
-            logger.critical(f"Puntuaciones aposteriori: {response_vano['PUNTUACION_APOSTERIORI']}")
+            # logger.critical(f"Puntuaciones aposteriori: {response_vano['PUNTUACION_APOSTERIORI']}")
             
             return response_vano, metrics
             
@@ -297,7 +316,7 @@ def make_summary(data):
         try:
             row = pd.DataFrame({"ID_VANO" : vano["ID_VANO"], "RECONSTRUCCION" : vano["RECONSTRUCCION"], "FLAG" : vano["FLAG"], "NUM_CONDUCTORES" : vano["NUM_CONDUCTORES"], 
                                 "NUM_CONDUCTORES_FIABLE": vano["NUM_CONDUCTORES_FIABLE"], "CONFIG_CONDUCTORES" : vano["CONFIG_CONDUCTORES"], "COMPLETITUD" : vano["COMPLETITUD"],
-                                "PUNTUACION_APRIORI" : vano["PUNTUACION_APRIORI"]["NOTA"], "PUNTUACION_APOSTERIORI": vano["PUNTUACION_APOSTERIORI"]["NOTA"]}, index = [i])
+                                "PUNTUACION_APRIORI" : vano["PUNTUACION_APRIORI"]["NOTA"]}, index = [i]) # , "PUNTUACION_APOSTERIORI": vano["PUNTUACION_APOSTERIORI"]["NOTA"]
                 
             summary = pd.concat([summary, row])
             
@@ -398,9 +417,6 @@ def main_pipeline(pathdata0, n_vanos):
         
     return data[:n_vanos], summary
 
-
-import copy
-
 def testing_pipeline(data,vanos_id):
     
     set_logger("INFO")
@@ -412,6 +428,6 @@ def testing_pipeline(data,vanos_id):
 
         response_vano, metrics = process_vano(vano)
 
-        # plot_data("", cond_values, apoyo_values, vert_values, extremos_values, "red")
-        # plt.show()
-        
+        if metrics == -1:
+            plot_data("", cond_values, apoyo_values, vert_values, extremos_values, "red")
+            plt.show()
