@@ -1,7 +1,8 @@
 # app/application/interfaces.py
 from abc import ABC, abstractmethod
 from typing import List, Dict
-from app.domain.models import Vano, ElectraData
+from app.presentation.rest.schemas.models import Vano, Linea
+from app.presentation.rest.schemas.response_models import VanoPrediction
 
 
 class VanoRepository(ABC):
@@ -14,13 +15,16 @@ class VanoRepository(ABC):
         pass
 
 
-class ElectraDataService(ABC):
+class LineaDataService(ABC):
     @abstractmethod
-    async def process_electra_data(self, data: ElectraData) -> None:
+    async def save_vano(self, vano: Vano) -> None:
+        pass
+
+    async def save_linea(self, linea: Linea) -> None:
         pass
 
 
-class ElectraPredictService(ABC):
+class LineaPredictService(ABC):
     @abstractmethod
-    async def predict_data_from_json(self, data: Dict) -> Dict:
+    async def predict_vano(self, vano: Vano) -> VanoPrediction:
         pass

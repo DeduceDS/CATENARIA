@@ -17,6 +17,9 @@ services:
       - DB_SCHEMA=${DB_SCHEMA}
       - KEYDB_HOST=${KEYDB_HOST:-redis}
       - KEYDB_PORT=${KEYDB_PORT:-6379}
+      - QUEUE_FEATURE=${QUEUE_FEATURE:-false} # WIP fix
+      - DATABASE_FEATURE=${DATABASE_FEATURE:-false}
+
     depends_on:
       - redis
       # - db
