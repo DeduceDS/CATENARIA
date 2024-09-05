@@ -1,9 +1,10 @@
 # app/presentation/rest/routes/vano_routes.py
 from fastapi import APIRouter, File, UploadFile, Depends
 from fastapi.responses import JSONResponse, FileResponse
-from app.application.services import LineaPredictServiceImpl
+from app.application.services import LineaPredictServiceImpl, FileCheckerServiceImpl
 from app.domain.models import Linea, Vano
 from app.domain.response_models import VanoPrediction
+from app.presentation.rest.exceptions.Files import InvaildFileFormatException
 
 from app.config import settings
 
@@ -37,8 +38,9 @@ if settings.DATABASE_FEATURE:
     async def upload_file(
         file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
     ):
-        content = await file.read()
-        data = json.loads(content)
+        # FIXME this service isn't even triggering when database.db file gives 500 error due to UTF8 encoding error on UploadFile
+        file_checker_service = FileCheckerServiceImpl()
+        file_checker_service.validate_file_type(file, "json")
 
         # Convert the list of dictionaries to a list of Vano objects
         vanos = [Vano(**vano_data) for vano_data in data]

@@ -3,10 +3,14 @@
 from typing import Dict
 import numpy as np
 
+from fastapi import UploadFile
+
 from app.domain.models import Linea, Vano
 from app.domain.response_models import VanoPrediction
+from app.domain.exceptions.file_exceptions import InvalidFileFormatException
 from app.application.interfaces import LineaDataService, LineaPredictService
 from app.application.interfaces import VanoRepository
+
 from electra_package.prerelease_2 import process_vano
 
 
@@ -51,3 +55,13 @@ class LineaPredictServiceImpl(LineaPredictService):
         result = json_serializable(prediction_dict)
 
         return VanoPrediction(**result)
+
+
+class FileCheckerServiceImpl:
+    @staticmethod
+    async def validate_file_type(file: UploadFile, filetype: str) -> None:
+        raise (
+            InvalidFileFormatException()
+            if not file.filename.endswith(filetype)
+            else None
+        )
