@@ -25,8 +25,7 @@ vano_database_router = APIRouter(prefix="/vano", tags=["Database"])
 
 # Predict
 @vano_router.post("/predict")
-async def predict_vano(vano: Vano) -> VanoPrediction:
-    predict_service = LineaPredictServiceImpl()
+async def predict_vano_handler(
     prediction = await predict_service.predict_vano(vano)
     return prediction
 
@@ -35,7 +34,7 @@ async def predict_vano(vano: Vano) -> VanoPrediction:
 if settings.DATABASE_FEATURE:
 
     @vano_database_router.post("/upload_linea_file")
-    async def upload_file(
+    async def upload_file_handler(
         file: UploadFile = File(...), db: AsyncSession = Depends(get_db)
     ):
         # FIXME this service isn't even triggering when database.db file gives 500 error due to UTF8 encoding error on UploadFile
@@ -53,7 +52,7 @@ if settings.DATABASE_FEATURE:
         return {"message": "File processed successfully"}
 
     @vano_database_router.get("/vanos_file")
-    async def get_vanos_file(db: AsyncSession = Depends(get_db)):
+    async def get_vanos_file_handler(db: AsyncSession = Depends(get_db)):
         vano_repository = VanoRepositoryImpl(db)
         vanos = await vano_repository.get_all()
 
@@ -72,7 +71,7 @@ if settings.DATABASE_FEATURE:
         )
 
     @vano_database_router.get("/vanos/{id}")
-    async def get_vano_by_id(id: str, db: AsyncSession = Depends(get_db)) -> Vano:
+    async def get_vano_by_id_handler(
         vano_repository = VanoRepositoryImpl(db)
         vano = await vano_repository.get_vano(id)
         return vano
