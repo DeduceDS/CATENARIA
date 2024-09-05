@@ -2,11 +2,18 @@
 from fastapi import APIRouter, File, UploadFile, Depends
 from fastapi.responses import JSONResponse, FileResponse
 from app.application.services import LineaPredictServiceImpl, FileCheckerServiceImpl
+from app.application.interfaces import LineaPredictService
 from app.domain.models import Linea, Vano
 from app.domain.response_models import VanoPrediction
 from app.presentation.rest.exceptions.Files import InvaildFileFormatException
 
 from app.config import settings
+
+
+# TODO implement dependency injection like this, all over the project.
+def get_predict_service() -> LineaPredictService:
+    return LineaPredictServiceImpl()
+
 
 # Repository deps
 if settings.DATABASE_FEATURE:
@@ -26,6 +33,8 @@ vano_database_router = APIRouter(prefix="/vano", tags=["Database"])
 # Predict
 @vano_router.post("/predict")
 async def predict_vano_handler(
+    vano: Vano, predict_service: LineaPredictService = Depends(get_predict_service)
+) -> VanoPrediction:
     prediction = await predict_service.predict_vano(vano)
     return prediction
 
