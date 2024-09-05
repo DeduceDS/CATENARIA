@@ -5,7 +5,7 @@ from sqlalchemy import Table, Column, Integer, Float, String, JSON
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 from app.application.interfaces import VanoRepository
-from app.domain.models import Vano, Apoyo, Conductor, Lidar, Linea
+from app.presentation.rest.schemas.models import Vano, Apoyo, Conductor, Lidar, Linea
 from app.infrastructure.database import Base
 from app.config import settings
 

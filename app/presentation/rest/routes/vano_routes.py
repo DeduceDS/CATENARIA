@@ -3,8 +3,8 @@ from fastapi import APIRouter, File, UploadFile, Depends
 from fastapi.responses import JSONResponse, FileResponse
 from app.application.services import LineaPredictServiceImpl, FileCheckerServiceImpl
 from app.application.interfaces import LineaPredictService
-from app.domain.models import Linea, Vano
-from app.domain.response_models import VanoPrediction
+from app.presentation.rest.schemas.models import Linea, Vano
+from app.presentation.rest.schemas.response_models import VanoPrediction
 from app.presentation.rest.exceptions.Files import InvaildFileFormatException
 
 from app.config import settings

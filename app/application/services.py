@@ -5,8 +5,8 @@ import numpy as np
 
 from fastapi import UploadFile
 
-from app.domain.models import Linea, Vano
-from app.domain.response_models import VanoPrediction
+from app.presentation.rest.schemas.models import Linea, Vano
+from app.presentation.rest.schemas.response_models import VanoPrediction
 from app.domain.exceptions.file_exceptions import InvalidFileFormatException
 from app.application.interfaces import LineaDataService, LineaPredictService
 from app.application.interfaces import VanoRepository

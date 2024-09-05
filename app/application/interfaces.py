@@ -1,8 +1,8 @@
 # app/application/interfaces.py
 from abc import ABC, abstractmethod
 from typing import List, Dict
-from app.domain.models import Vano, Linea
-from app.domain.response_models import VanoPrediction
+from app.presentation.rest.schemas.models import Vano, Linea
+from app.presentation.rest.schemas.response_models import VanoPrediction
 
 
 class VanoRepository(ABC):

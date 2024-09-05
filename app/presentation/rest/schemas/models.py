@@ -1,7 +1,7 @@
 # app/domain/models.py
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from app.domain.examples.vano_example import VANO_JSON_EXAMPLE
+from app.presentation.rest.schemas.examples.vano_example import VANO_JSON_EXAMPLE
 
 
 class Apoyo(BaseModel):
