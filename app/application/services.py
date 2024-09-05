@@ -1,31 +1,40 @@
 # app/application/services.py
-from app.application.interfaces import (
-    ElectraDataService,
-    VanoRepository,
-    ElectraPredictService,
-)
-from app.domain.models import ElectraData
+
 from typing import Dict
-from electra_package.modules_main import fit_plot_vano_group_2
 import numpy as np
 
+from fastapi import UploadFile
 
-class ElectraDataServiceImpl(ElectraDataService):
+from app.domain.models import Linea, Vano
+from app.domain.response_models import VanoPrediction
+from app.domain.exceptions.file_exceptions import InvalidFileFormatException
+from app.application.interfaces import LineaDataService, LineaPredictService
+from app.application.interfaces import VanoRepository
+
+from electra_package.prerelease_2 import process_vano
+
+
+# Data Service
+class LineaDataServiceImpl(LineaDataService):
     def __init__(self, vano_repository: VanoRepository):
         self.vano_repository = vano_repository
 
-    async def process_electra_data(self, data: ElectraData) -> None:
-        for vano in data.vanos:
+    async def save_vano(self, vano: Vano) -> None:
+        await self.vano_repository.save(vano)
+
+    async def save_linea(self, linea: Linea) -> None:
+        for vano in linea.vanos:
             await self.vano_repository.save(vano)
 
 
-class ElectraPredictServiceImpl(ElectraPredictService):
+# Predict Service
+class LineaPredictServiceImpl(LineaPredictService):
     def __init__(self):
         pass
 
-    async def predict_data_from_json(self, data: Dict) -> Dict:
+    async def predict_vano(self, vano: Vano) -> VanoPrediction:
 
-        # import json
+        # json serializer
         def json_serializable(obj):
             if isinstance(obj, np.ndarray):
                 return obj.tolist()
@@ -40,9 +49,19 @@ class ElectraPredictServiceImpl(ElectraPredictService):
             else:
                 return obj
 
-        # getting required out_data destructuring the returned tuple (data, rmses, maxes, correlations)
-        out_data, *others = fit_plot_vano_group_2(data)
+        # getting required out_data destructuring the returned tuple (prediction_dict, rmses, maxes, correlations)
+        prediction_dict, *others = process_vano(vano.model_dump())
 
-        result = json_serializable(out_data)
+        result = json_serializable(prediction_dict)
 
-        return result
+        return VanoPrediction(**result)
+
+
+class FileCheckerServiceImpl:
+    @staticmethod
+    async def validate_file_type(file: UploadFile, filetype: str) -> None:
+        raise (
+            InvalidFileFormatException()
+            if not file.filename.endswith(filetype)
+            else None
+        )

@@ -97,9 +97,9 @@ def puntuate_and_save(response_vano, fit1, fit2, fit3, params, evaluaciones, van
     response_vano['CONDUCTORES_CORREGIDOS'][str(0)]=fit1.T.tolist()
     response_vano['CONDUCTORES_CORREGIDOS'][str(1)]=fit2.T.tolist()
     response_vano['CONDUCTORES_CORREGIDOS'][str(2)]=fit3.T.tolist()
-    response_vano['PARAMETROS(a,h,k)'][str(0)]=params[0]
-    response_vano['PARAMETROS(a,h,k)'][str(1)]=params[1]
-    response_vano['PARAMETROS(a,h,k)'][str(2)]=params[2]
+    response_vano['PARAMETROS_a_h_k'][str(0)]=params[0]
+    response_vano['PARAMETROS_a_h_k'][str(1)]=params[1]
+    response_vano['PARAMETROS_a_h_k'][str(2)]=params[2]
     
     response_vano=puntuación_por_vano(response_vano, evaluaciones, vano_length)
                         
@@ -121,7 +121,7 @@ def process_vano(vano):
         response_vano = {}
         response_vano["ID_VANO"] = idv
         response_vano['CONDUCTORES_CORREGIDOS']={}
-        response_vano['PARAMETROS(a,h,k)']={} #PARAMETROS(a,h,k)
+        response_vano['PARAMETROS_a_h_k']={} #PARAMETROS_a_h_k
         response_vano['FLAG'] = 'None'
         response_vano['NUM_CONDUCTORES'] = 0
         response_vano["NUM_CONDUCTORES_FIABLE"] = False
