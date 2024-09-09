@@ -36,8 +36,8 @@ def puntuacion_apriori(cond_values, extremos_values, apoyo_values, vert_values, 
         logger.critical(np.array(extremos_values).shape[1])
         logger.warning(f"No tiene 2 apoyos")
         
-        notas_apriori["P_HUECO"] = -99.0
-        notas_apriori["DIFF2D"] = -99.0
+        notas_apriori["P_HUECO"] = []
+        notas_apriori["DIFF2D"] = []
         notas_apriori["NOTA"] = -99.0
         
         return notas_apriori
