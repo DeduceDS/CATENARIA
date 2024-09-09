@@ -4,8 +4,8 @@ from pydantic import BaseModel
 
 # TODO use fileds for schema descriptions
 class PuntuacionApriori(BaseModel):
-    P_HUECO: float | list[float]
-    DIFF2D: float | list[float]
+    P_HUECO: list[float]
+    DIFF2D: list[float]
     NOTA: float
 
 
