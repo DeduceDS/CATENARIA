@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import time
+from collections import Counter
 
 from scipy.stats import linregress
 
@@ -359,6 +360,25 @@ def analyze_conductor_configuration(X_scaled):
                 f"Unrecognized geometry: variances {np.std(normalized_a1), np.std(normalized_a2), np.std(normalized_a3)}"
             )
             return -1, -1
+        
+def filter_and_relabel_three_largest_clusters(labels, centroids, X_scaled):
+    # Step 1: Identify the three largest clusters by size, excluding noise
+    label_counts = Counter(labels[labels != -1])  # Exclude noise points (-1)
+    three_largest_clusters = [cluster for cluster, _ in label_counts.most_common(3)]
+    
+    # Step 2: Create a mapping for the three largest clusters to new labels [0, 1, 2]
+    cluster_mapping = {old_label: new_label for new_label, old_label in enumerate(three_largest_clusters)}
+
+    # Step 3: Relabel the data points to have only labels [0, 1, 2]
+    filtered_labels = np.array([cluster_mapping[label] for label in labels if label in three_largest_clusters])
+
+    # Step 4: Filter the centroids for the three largest clusters
+    filtered_centroids = np.array([centroids[cluster] for cluster in three_largest_clusters])
+    
+    # Step 5: Filter X_scaled to keep only points belonging to the three largest clusters
+    filtered_X_scaled = X_scaled[:, np.isin(labels, three_largest_clusters)]
+
+    return filtered_X_scaled, filtered_labels, filtered_centroids
 
 
 def cluster_and_evaluate(X_scaled, n_conds, coord):
@@ -367,15 +387,25 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
     clusters = []
 
     for i in range(2):
+        
+        if coord == 0:
 
-        if i == 0:
-            labels, centroids = kmeans_clustering(
-                X_scaled, n_conds, 500, coord, mode="Normal"
-            )
+            if i == 0:
+                labels, centroids = kmeans_clustering(
+                    X_scaled, n_conds, 500, coord, mode="Normal"
+                )
+            else:
+                labels, centroids = kmeans_clustering(
+                    X_scaled, n_conds, 500, coord, mode="Random"
+                )
+                
         else:
-            labels, centroids = kmeans_clustering(
-                X_scaled, n_conds, 500, coord, mode="Random"
-            )
+            
+            # Assuming X_scaled is your input data that is already defined and preprocessed
+            centroids, labels = dbscan_find_clusters_3(X_scaled)  # Adjust parameters if necessary
+
+            # Example usage with your existing centroids, labels, and X_scaled
+            X_scaled, labels, centroids = filter_and_relabel_three_largest_clusters(labels, centroids, X_scaled)
 
         max_size = 0
 
@@ -453,13 +483,13 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
 
             if len(overlapping_clusters) == 0:
                 logger.success(f"GOOD CLUSTERS: found {n_conds}")
-                # plot_clusters(X_scaled, labels, centroids, coord)
+                plot_clusters(X_scaled, labels, centroids, coord)
                 good_clust = True
                 return good_clust, clusters
 
             else:
                 logger.warning("OVERLAPPING CLUSTERS")
-                # plot_clusters(X_scaled, labels, centroids, coord)
+                plot_clusters(X_scaled, labels, centroids, coord)
                 # good_clust = False
                 return good_clust, clusters
 

@@ -278,11 +278,11 @@ def plot_clusters(points, labels, centroids, coord):
     
     plt.subplot(1,2,1)
     plt.scatter(points[coord, :], points[coord1, :], c=labels, cmap='viridis', s=1)
-    plt.vlines(centroids, ymin=np.min(points[coord1, :]), ymax=np.max(points[coord1, :]), color='red', label='Centroids')
+    # plt.vlines(centroids, ymin=np.min(points[coord1, :]), ymax=np.max(points[coord1, :]), color='red', label='Centroids')
     
     plt.subplot(1,2,2)
     plt.scatter(points[coord, :], points[coord2, :], c=labels, cmap='viridis', s=1)
-    plt.vlines(centroids, ymin=np.min(points[coord2, :]), ymax=np.max(points[coord2, :]), color='red', label='Centroids')
+    # plt.vlines(centroids, ymin=np.min(points[coord2, :]), ymax=np.max(points[coord2, :]), color='red', label='Centroids')
     
     plt.title(f'Clusters along {["X", "Y", "Z"][coord]}-axis vs {["X", "Y", "Z"][coord1]}-axis')
     plt.xlabel(f'{["X", "Y", "Z"][coord]} Coordinate')
