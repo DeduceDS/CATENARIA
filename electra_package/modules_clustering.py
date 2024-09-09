@@ -1,14 +1,16 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from loguru import logger
+import random
+
 from sklearn.neighbors import NearestNeighbors
 from sklearn.neighbors import kneighbors_graph
 from sklearn import metrics
 from sklearn.cluster import SpectralClustering
 from sklearn.cluster import DBSCAN
-import matplotlib.pyplot as plt
 
 #### FUNCTIONS FOR CLUSTERING ####
-def initialize_centroids(points, n_clusters, coord):
+def initialize_centroids(points, n_clusters, coord, mode = "Normal"):
     """
     Initialize centroids for clustering based on the minimum, maximum, and optionally mean of the x-coordinates.
 
@@ -20,7 +22,16 @@ def initialize_centroids(points, n_clusters, coord):
     numpy.ndarray: The initialized centroids.
     """
     logger.trace(f"Initializing for {n_clusters} clusters")
+    
     centroids = np.zeros(n_clusters)
+    
+    if mode == "Random":
+        
+        centroids[0] = random.uniform(-1, 1)
+        centroids[1] = random.uniform(-1, 1)
+        centroids[2] = random.uniform(-1, 1)
+        
+        return centroids
     
     centroids[0] = np.min(points[coord, :])
     centroids[1] = np.max(points[coord, :])
@@ -67,7 +78,7 @@ def update_centroids(points, labels, n_clusters, coord):
             new_centroids[i] = np.mean(cluster_points)
     return new_centroids
 
-def kmeans_clustering(points, n_clusters, max_iterations, coord):
+def kmeans_clustering(points, n_clusters, max_iterations, coord, mode = "Normal"):
     """
     Perform KMeans clustering on the specified coordinate of the points.
 
@@ -81,12 +92,13 @@ def kmeans_clustering(points, n_clusters, max_iterations, coord):
     tuple: Cluster labels and centroids.
     """
     logger.debug(f"Starting KMeans clustering for coord: {coord}")
-    centroids = initialize_centroids(points, n_clusters, coord)
+    centroids = initialize_centroids(points, n_clusters, coord, mode)
+    logger.debug(f"Initzialization {centroids}")
     for iteration in range(max_iterations):
         labels = assign_clusters(points, centroids, coord)
         new_centroids = update_centroids(points, labels, n_clusters, coord)
         if np.allclose(new_centroids, centroids):
-            logger.trace(f"Convergence reached at iteration {iteration}")
+            logger.debug(f"Convergence reached at iteration {iteration}")
             break
         centroids = new_centroids
     return labels, centroids
@@ -111,16 +123,152 @@ def plot_clusters(points, labels, centroids, coord):
     plt.figure(figsize=(12,8))
     plt.subplot(1,2,1)
     plt.scatter(points[coord, :], points[coord1, :], c=labels, cmap='viridis', s=1)
-    plt.vlines(centroids, ymin=np.min(points[coord1, :]), ymax=np.max(points[coord1, :]), color='red', label='Centroids')
+    # plt.vlines(centroids, ymin=np.min(points[coord1, :]), ymax=np.max(points[coord1, :]), color='red', label='Centroids')
     plt.subplot(1,2,2)
     plt.scatter(points[coord, :], points[coord2, :], c=labels, cmap='viridis', s=1)
-    plt.vlines(centroids, ymin=np.min(points[coord2, :]), ymax=np.max(points[coord2, :]), color='red', label='Centroids')
+    # plt.vlines(centroids, ymin=np.min(points[coord2, :]), ymax=np.max(points[coord2, :]), color='red', label='Centroids')
     plt.title(f'Clusters along {["X", "Y", "Z"][coord]}-axis vs {["X", "Y", "Z"][coord1]}-axis')
     plt.xlabel(f'{["X", "Y", "Z"][coord]} Coordinate')
     plt.ylabel(f'{["X", "Y", "Z"][coord1]} Coordinate')
     plt.legend()
     plt.show()
+    
+def group_dbscan_3(k,X_scaled):
+    """
+    Groups data points into clusters using the DBSCAN algorithm, with the optimal epsilon value determined from k-nearest neighbors distances.
 
+    Parameters:
+    k (int): The number of nearest neighbors to consider for determining the epsilon value.
+    X_scaled (numpy.ndarray): A 2D array of scaled data points to be clustered.
+
+    Returns:
+    tuple: A tuple containing:
+        - centroids (list): A list of centroids for each cluster, where each centroid is a list of coordinates.
+        - labels (numpy.ndarray): An array of labels assigned to each data point, indicating the cluster it belongs to. 
+        Noise points are labeled as -1.
+
+    The function performs the following steps:
+    1. Fits a k-nearest neighbors model to the data to determine distances to the k-th nearest neighbors.
+    2. Sorts these distances and computes the second derivative to find the inflection point, which indicates the optimal epsilon value.
+    3. Applies the DBSCAN algorithm with the determined epsilon value and the specified min_samples.
+    4. Computes the centroids for each cluster by averaging the coordinates of points within the cluster.
+
+    Note:
+    - The function determines the optimal epsilon value dynamically based on the distances to the k-th nearest neighbors.
+    - The DBSCAN algorithm groups data points into clusters based on density, identifying regions of high density and labeling points in low-density regions as noise.
+    """
+
+    neighbors = NearestNeighbors(n_neighbors=int(k))
+    neighbors_fit = neighbors.fit(X_scaled)
+    distances, indices = neighbors_fit.kneighbors(X_scaled)
+
+    distances = np.sort(distances[:, int(k)-1], axis=0)
+    second_derivative = np.diff(distances, n=5)
+    inflection_point = np.argmax(second_derivative) + 1
+
+    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=int(k), algorithm = "auto")  # Ajusta eps y min_samples según tus datos
+    labels = dbscan.fit_predict(X_scaled)
+
+    unique_labels = set(labels)
+    centroids = []
+    for label in unique_labels:
+        if label != -1:
+            cluster_points = X_scaled[labels == label]
+            centroid = cluster_points.mean(axis=0)
+            centroids.append(centroid)
+    centroids=[point.tolist() for point in centroids]
+
+    # centroids=flatten_sublist(centroids)
+    return centroids, labels
+
+
+def dbscan_find_clusters_3(X_scaled):
+    """
+    Finds clusters in the scaled data using the DBSCAN algorithm with different epsilon values,
+    and selects the best clustering based on the silhouette score.
+
+    Parameters:
+    X_scaled (numpy.ndarray): A 2D array of scaled data points to be clustered.
+
+    Returns:
+    tuple: A tuple containing:
+        - centroids (numpy.ndarray): The centroids of the clusters found by DBSCAN.
+        - labels (numpy.ndarray): The labels assigned to each data point indicating the cluster it belongs to.
+
+    The function performs the following steps:
+    1. Iterates over a predefined list of epsilon values.
+    2. Applies the `group_dbscan_3` function to cluster the data with each epsilon value.
+    3. Computes the silhouette score for each clustering result.
+    4. Selects the clustering result with the highest silhouette score.
+    5. Returns the centroids and labels of the best clustering result.
+
+    The silhouette score measures how similar an object is to its own cluster compared to other clusters, providing an indication of the quality of the clustering.
+    """
+
+    ar=[5,10,15]
+    best_k = 5
+    
+    for k in ar:
+        
+        # print(X_scaled.shape)
+        if k > X_scaled.shape[0]:
+            continue
+        
+        centroids,labels=group_dbscan_3(k,X_scaled.T)
+        if len(np.unique(labels))==1:
+            score=-1
+        else:
+            score=metrics.silhouette_score(X_scaled.T,labels)
+
+        if k==np.array(ar).min():
+            best_score=score
+            best_k=k
+        elif score>best_score:
+            best_score=score
+            best_k=k
+
+    centroids,labels=group_dbscan_3(best_k,X_scaled.T)
+
+    return centroids,labels
+
+
+def extract_n_clusters(X_scaled):
+
+    cent, labs = dbscan_find_clusters_3(X_scaled)
+
+    real_clust = 0
+    noise = False
+    total_points = X_scaled.shape[1]
+
+    points_per_clust = total_points/(len(labs)-1)
+
+    noise_cluster = 0
+    real_labels = []
+    clusters = []
+    
+    # print(labs)
+
+    for lab in np.unique(labs):
+        
+        logger.debug(f"Proportion of cluster: {100*abs(np.sum(lab == labs))/total_points} for {len(np.unique(labs))-1} clusters")
+        if 100*np.sum(lab == labs)/total_points >= 20.0:
+            
+            if lab == -1:
+                
+                noise = True
+                noise_cluster = X_scaled[:,lab == labs]
+                
+            else:
+                real_labels.append(lab)
+                real_clust += 1
+                clusters.append(X_scaled[:,lab == labs])
+                
+
+                
+    return clusters, noise_cluster
+
+
+############################ NOT IN RELEASE #########################################
 
 def spectral_clustering(points, n_clusters, n_init):
     """
@@ -163,11 +311,6 @@ def spectral_clustering(points, n_clusters, n_init):
     centroids=[point.tolist() for point in centroids]
     return labels, centroids
 
-def catenaria(x, a, h, k):
-    x = np.asarray(x).flatten()
-    r=a * np.cosh((x - h) / a) + k
-    return r
-
 def invert_linear_model(y_val, slope, intercept):
     """
     Inverts a linear model to compute the x-values from given y-values.
@@ -180,63 +323,6 @@ def invert_linear_model(y_val, slope, intercept):
     """
     
     return (y_val - intercept) / slope
-
-def flatten_sublist(sublist):
-    """
-    Flatten a list of arrays into a single list.
-
-    Parameters:
-    sublist (list of arrays): The list of arrays to be flattened.
-
-    Returns:
-    list: A single list containing all the elements of the input arrays.
-    """
-    
-    flat_list = [sublist[0]]
-    for array in sublist[1:]:
-        # print(array)
-        flat_list.extend(array.tolist())
-    return flat_list
-
-def flatten_sublist_2(sublist):
-    """
-    Flatten a list of arrays into a single list, ensuring the last two elements are individually added at the end.
-
-    Parameters:
-    sublist (list of arrays): The list of arrays to be flattened.
-
-    Returns:
-    list: A single list containing all the elements of the input arrays, with the last two arrays added individually.
-    """
-    
-    flat_list = [sublist[0]]
-    for array in sublist[1:-2]:
-        flat_list.extend(array.tolist())
-    flat_list.extend([sublist[-2]])
-    flat_list.extend([sublist[-1]])
-    return flat_list
-
-def clpt_to_array(cl_pt):
-    """
-    This function processes a list of coordinate points, extracts the x, y, and z coordinates,
-    and returns them as separate numpy arrays.
-
-    Parameters:
-    cl_pt (list of lists or tuples): A list where each element is a list or tuple containing
-                                    the x, y, and z coordinates of a point.
-    Returns:
-    numpy.ndarray: A 2D numpy array where the first row contains the x coordinates, the second row
-                contains the y coordinates, and the third row contains the z coordinates.
-    """
-    rfx=[]
-    rfy=[]
-    rfz=[]
-    print(cl_pt)
-    for el in cl_pt:
-        rfx.append(el[0])
-        rfy.append(el[1])
-        rfz.append(el[2])
-    return np.array([rfx,rfy,rfz])
 
 
 def group_dbscan(k,X_scaled):
@@ -360,94 +446,3 @@ def dbscan_find_clusters_4(X_scaled):
 
     return centroids,labels
 
-def group_dbscan_3(k,X_scaled):
-    """
-    Groups data points into clusters using the DBSCAN algorithm, with the optimal epsilon value determined from k-nearest neighbors distances.
-
-    Parameters:
-    k (int): The number of nearest neighbors to consider for determining the epsilon value.
-    X_scaled (numpy.ndarray): A 2D array of scaled data points to be clustered.
-
-    Returns:
-    tuple: A tuple containing:
-        - centroids (list): A list of centroids for each cluster, where each centroid is a list of coordinates.
-        - labels (numpy.ndarray): An array of labels assigned to each data point, indicating the cluster it belongs to. 
-        Noise points are labeled as -1.
-
-    The function performs the following steps:
-    1. Fits a k-nearest neighbors model to the data to determine distances to the k-th nearest neighbors.
-    2. Sorts these distances and computes the second derivative to find the inflection point, which indicates the optimal epsilon value.
-    3. Applies the DBSCAN algorithm with the determined epsilon value and the specified min_samples.
-    4. Computes the centroids for each cluster by averaging the coordinates of points within the cluster.
-
-    Note:
-    - The function determines the optimal epsilon value dynamically based on the distances to the k-th nearest neighbors.
-    - The DBSCAN algorithm groups data points into clusters based on density, identifying regions of high density and labeling points in low-density regions as noise.
-    """
-
-    neighbors = NearestNeighbors(n_neighbors=int(k))
-    neighbors_fit = neighbors.fit(X_scaled)
-    distances, indices = neighbors_fit.kneighbors(X_scaled)
-
-    distances = np.sort(distances[:, int(k)-1], axis=0)
-    second_derivative = np.diff(distances, n=5)
-    inflection_point = np.argmax(second_derivative) + 1
-
-    dbscan = DBSCAN(eps=distances[inflection_point], min_samples=int(k), algorithm = "auto")  # Ajusta eps y min_samples según tus datos
-    labels = dbscan.fit_predict(X_scaled)
-
-    unique_labels = set(labels)
-    centroids = []
-    for label in unique_labels:
-        if label != -1:
-            cluster_points = X_scaled[labels == label]
-            centroid = cluster_points.mean(axis=0)
-            centroids.append(centroid)
-    centroids=[point.tolist() for point in centroids]
-
-    # centroids=flatten_sublist(centroids)
-    return centroids, labels
-
-
-def dbscan_find_clusters_3(X_scaled):
-    """
-    Finds clusters in the scaled data using the DBSCAN algorithm with different epsilon values,
-    and selects the best clustering based on the silhouette score.
-
-    Parameters:
-    X_scaled (numpy.ndarray): A 2D array of scaled data points to be clustered.
-
-    Returns:
-    tuple: A tuple containing:
-        - centroids (numpy.ndarray): The centroids of the clusters found by DBSCAN.
-        - labels (numpy.ndarray): The labels assigned to each data point indicating the cluster it belongs to.
-
-    The function performs the following steps:
-    1. Iterates over a predefined list of epsilon values.
-    2. Applies the `group_dbscan_3` function to cluster the data with each epsilon value.
-    3. Computes the silhouette score for each clustering result.
-    4. Selects the clustering result with the highest silhouette score.
-    5. Returns the centroids and labels of the best clustering result.
-
-    The silhouette score measures how similar an object is to its own cluster compared to other clusters, providing an indication of the quality of the clustering.
-    """
-
-    ar=[5,10,20]
-    for k in ar:
-        
-        centroids,labels=group_dbscan_3(k,X_scaled.T)
-        if len(np.unique(labels))==1:
-            score=-1
-        else:
-            score=metrics.silhouette_score(X_scaled.T,labels)
-
-        if k==np.array(ar).min():
-            best_score=score
-            best_k=k
-        elif score>best_score:
-            best_score=score
-            best_k=k
-
-    centroids,labels=group_dbscan_3(best_k,X_scaled.T)
-
-    return centroids,labels

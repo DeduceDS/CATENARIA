@@ -1,53 +1,15 @@
 
 import math
-import matplotlib.pyplot as plt
 import re
 import sys
-from electra_package.puntuacion import *
-from electra_package.modules_clustering import *
+
+import matplotlib.pyplot as plt
 from loguru import logger
+import pandas as pd
+import numpy as np
 
+from electra_package.modules_clustering import kmeans_clustering
 
-#### FUNCTIONS TO PROCESS JSON DATA ####
-
-def print_element(element):
-    """
-    Print the contents of a nested dictionary in a formatted manner.
-
-    Parameters:
-    element (dict): The dictionary to be printed. It can contain nested dictionaries and lists.
-    """
-
-    for key in element.keys():
-
-        if type(element[key]) in [list, dict]:
-
-            print(f"\n{key}: ")
-
-            if type(element[key]) == list:
-                
-                print(f"- Length of list: {len(element[key])}")
-                
-                if len(element[key]) == 0:
-                    continue
-                
-                element2 = element[key][0]
-                    
-
-            else:
-
-                element2 = element[key]
-
-            for key2 in element2.keys():
-
-                print(f"    {key2}: {element2[key2]}")
-
-                if type(element2[key2]) == list:
-                    print(f"    - Length of list: {len(element2[key2])}")
-
-        else:
-            print(f"\n{key}: {element[key]}")
-            
             
 def set_logger(level):
     
@@ -62,6 +24,8 @@ def set_logger(level):
     logger.info(f"Setting logger")
     
 
+#### FUNCTIONS TO PROCESS JSON DATA ####
+    
 def get_coord(points):
     """
     Extract and stack x, y, and z coordinates from a list of points.
@@ -101,8 +65,15 @@ def get_coord2(extremos_apoyos):
     for i in range(len(extremos_apoyos)):
 
         x_vals = x_vals + [extremos_apoyos[i]["COORDENADA_X"], extremos_apoyos[i]["COORDENADA_X"]]
-        y_vals = y_vals + [extremos_apoyos[i]["COORDEANDA_Y"], extremos_apoyos[i]["COORDEANDA_Y"]]
-
+        
+        for key in ["COORDENADA_Y", "COORDEANDA_Y"]:
+            
+            try:
+                y_vals = y_vals + [extremos_apoyos[i][key], extremos_apoyos[i][key]]
+                
+            except Exception as e:
+                pass
+    print(y_vals)
     return np.stack(x_vals), np.stack(y_vals), np.stack(z_vals)
 
 def extract_vano_values(vano):
@@ -141,6 +112,17 @@ def extract_vano_values(vano):
     
     return idv, vano_length, np.array(cond_values), np.array(apoyo_values), vert_values, extremos_values
 
+def unscale_fits(pols, scaler_x, scaler_y, scaler_z):
+    
+    pols = np.array(pols)
+    
+    pols[:, 0, :] = scaler_x.inverse_transform(pols[:, 0, :])
+    pols[:, 1, :] = scaler_y.inverse_transform(pols[:, 1, :])
+    pols[:, 2, :] = scaler_z.inverse_transform(pols[:, 2, :])
+
+    return pols
+
+############################ NOT IN RELEASE #########################################
 
 #### FUNCTIONS TO COMPUTE DISTANCES ####
 
@@ -183,6 +165,46 @@ def distance(pt1, pt2):
     distancia = math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
 
     return distancia
+
+#### FUNCTIONS TO PROCESS JSON DATA ####
+
+def print_element(element):
+    """
+    Print the contents of a nested dictionary in a formatted manner.
+
+    Parameters:
+    element (dict): The dictionary to be printed. It can contain nested dictionaries and lists.
+    """
+
+    for key in element.keys():
+
+        if type(element[key]) in [list, dict]:
+
+            print(f"\n{key}: ")
+
+            if type(element[key]) == list:
+                
+                print(f"- Length of list: {len(element[key])}")
+                
+                if len(element[key]) == 0:
+                    continue
+                
+                element2 = element[key][0]
+                    
+
+            else:
+
+                element2 = element[key]
+
+            for key2 in element2.keys():
+
+                print(f"    {key2}: {element2[key2]}")
+
+                if type(element2[key2]) == list:
+                    print(f"    - Length of list: {len(element2[key2])}")
+
+        else:
+            print(f"\n{key}: {element[key]}")
 
 #### FUNCTIONS TO MANIPULATE ARRAYS ####
 
@@ -259,16 +281,6 @@ def flatten_sublist_2(sublist):
     flat_list.extend([sublist[-2]])
     flat_list.extend([sublist[-1]])
     return flat_list
-
-def unscale_fits(pols, scaler_x, scaler_y, scaler_z):
-    
-    pols = np.array(pols)
-    
-    pols[0, :] = scaler_x.inverse_transform(pols[0, :])
-    pols[1, :] = scaler_y.inverse_transform(pols[1, :])
-    pols[2, :] = scaler_z.inverse_transform(pols[2, :])
-
-    return pols
 
 def data_catenaryparameters_to_df(data):
     """

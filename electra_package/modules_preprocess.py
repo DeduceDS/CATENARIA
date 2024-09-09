@@ -1,4 +1,3 @@
-
 from loguru import logger
 import numpy as np
 import pandas as pd
@@ -7,151 +6,9 @@ import json
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
-
-from electra_package.puntuacion import *
-from electra_package.modules_utils import *
-from electra_package.modules_clustering import *
-from electra_package.modules_plots import *
-
-def get_bad_data(pathdata):
-    
-    bad_ids = get_bad_ids(pathdata.split("json")[0]+"txt")
-
-    with open(pathdata, 'r') as archivo:
-        data = json.load(archivo)
-        
-    # print(len(data), bad_ids)
-
-    bad_data_df = extract_preprocess_errors(data, bad_ids)
-
-    bad_data = [data[i] for i in bad_data_df["num"]]
-
-    return bad_data_df, bad_data
-
-def extract_preprocess_errors(data, bad_ids):
-
-    succeed_preprocess = []
-    failed_preprocess = []
-    errors = []
-    num = []
-
-    for i in range(len(data)):
-        
-        print(f"\nProcessing Vano {i}")
-        
-        vano_id = data[i]['ID_VANO']
-        
-        # if vano_id in bad_ids:
-        #     print("Vano skiped ", i)
-        #     continue
-        
-        try:
-            
-            cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
-            rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
-            succeed_preprocess.append(vano_id)
-            
-        except Exception as e:
-            
-            failed_preprocess.append(vano_id)
-            errors.append(e)
-            num.append(i)
-            print(f"Vano {vano_id} failed preprocess: {e}")
-            
-def get_new_extreme_values(data):
-
-    nuevos_extremos = []
-    nuevos_extremos_ids = []
-    un_apoyo_ids = []
-
-    for i in range(len(data)):
-        
-        print(f"\nProcessing vano {i}")
-        
-        cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
-
-        print(f"We lack of extreme values: {len(extremos_values[2]) != 4}")
-        
-        # Standard scaling
-        scaler = StandardScaler()
-        scaled_points = scaler.fit_transform(np.array(apoyo_values))
-        
-        labels, centroids = kmeans_clustering(scaled_points, 2, 500)
-        
-        points = scaler.inverse_transform(scaled_points)
-        
-        extremos = []
-
-        for lab in np.unique(labels):
-
-            apoyo = points[:, labels == lab]
-
-            mean_x = np.mean(apoyo[0,:])
-            mean_y = np.mean(apoyo[1,:])
-            mean_z = np.mean(apoyo[2,:])
-            
-            c_mass = np.array([mean_x, mean_y, mean_z])
-            extremos.append(c_mass)
-        
-
-        dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
-        extremos = np.array(extremos).T
-        
-        print(f"Distance between mean points: {dist}")
-        # print(f"New extreme values: {extremos}")
-        
-        if 100*abs(dist - data[i]["LONGITUD_2D"])/data[i]["LONGITUD_2D"] > 10.0:
-            
-            print(f"Proportional absolut error of distance = {100*abs(dist - data[i]['LONGITUD_2D'])/data[i]['LONGITUD_2D']}")
-            print("SOLO HAY 1 APOYO")
-            
-            plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
-            plt.scatter(extremos[0,:], extremos[1,:], s = 10, color = "blue")
-            # plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
-            plt.title('Custom 1D K-means Clustering')
-            plt.xlabel('X Coordinate')
-            plt.ylabel('Y Coordinate')
-            plt.show()
-                
-            # plot_data("test",cond_values, apoyo_values, vert_values, extremos)
-            
-            un_apoyo_ids.append(data[i]["ID_VANO"])
-            continue
-        
-        nuevos_extremos.append(extremos)
-        nuevos_extremos_ids.append(data[i]["ID_VANO"])
-        # plot_data("test",cond_values, apoyo_values, vert_values, extremos)
-    return np.array(nuevos_extremos), nuevos_extremos_ids, un_apoyo_ids
+from electra_package.modules_utils import  look_for_vano, get_coord, flatten_sublist, extract_vano_values, get_bad_ids
 
 
-def mod_extremos(data,new_extremos,ids):
-    
-    for id in ids:
-        
-        idx, vano = look_for_vano(data,id)
-        new_apoyos = []
-        
-        for j in range(2):
-            
-            new_apoyos.append({"COORDENADA_X": list(new_extremos[0,j]), "COORDENADA_Y": list(new_extremos[1,j]), "COORDENADAS_Z": list(new_extremos[2,j])})
-        # print(vano["APOYOS"])
-        vano['APOYOS'] = new_apoyos
-        # print(new_apoyos)
-        data[idx] = vano
-            
-    return data
-
-#### FUNCTIONS TO TRANSFORM/PREPROCESS 3D POINTS ####
-
-def random_sampling(point_cloud, num_points):
-    logger.debug(f"random sampling for: {num_points}")
-    if point_cloud.shape[1] <= num_points:
-        return point_cloud
-    indices = np.random.choice(int(point_cloud.shape[1]), int(num_points), replace=False)
-    return point_cloud[:, indices]
-
-    
 def voxel_grid_downsampling_with_centroids(point_cloud, voxel_size):
     """
     Perform voxel grid downsampling on 3D points, using the centroid of points within each voxel.
@@ -190,55 +47,40 @@ def down_sample_lidar(apoyo_values, cond_values):
     
     return apoyo_values, cond_values
 
-def pretreatment_linegroup(parameters):
-    """
-    Preprocess and clean the parameters data for line groups.
+#### SCALE FUNCTIONS ####
 
-    This function flattens the list of parameters, converts it into a DataFrame, and performs
-    outlier removal using the interquartile range (IQR) method. The cleaned DataFrame is then
-    returned for further analysis.
+def scale_vertices(rotated_vertices, scaler_x, scaler_y, scaler_z):
+    
+    scaled_vertices = [np.array([scaler_x.transform(vert[0,:].reshape(-1, 1)).flatten()
+                                , scaler_y.transform(vert[1,:].reshape(-1, 1)).flatten(), 
+                                scaler_z.transform(vert[2,:].reshape(-1, 1)).flatten()]) for vert in rotated_vertices]
+    return scaled_vertices
+
+def scale_conductor(X):
+    """
+    Scale the x, y, and z coordinates of the conductor points using standard scaling.
 
     Parameters:
-    parameters (list): A list of parameters for different line groups, where each sublist contains
-                    the parameters for a single line group.
+    X (numpy.ndarray): The x, y, and z coordinates of the conductor points.
 
     Returns:
-    pd.DataFrame: A cleaned DataFrame containing the parameters for different line groups, with
-                outliers removed and indices reset.xº
+    numpy.ndarray: The scaled x, y, and z coordinates.
     """
-    flattened_data = [flatten_sublist(sublist) for sublist in parameters]
-    columns = ['ID', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']
-    df = pd.DataFrame(flattened_data, columns=columns)
-    dfd=df.dropna().copy()
-    for i in  [ 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']:
+    
+    logger.info(f"Scaling conductor")
+    # Normalizzazione dei valori di x e y
+    scaler_y = StandardScaler()
+    scaler_x = StandardScaler()
+    scaler_z = StandardScaler()
 
-        IQR=dfd[i].quantile(0.75)-dfd[i].quantile(0.25)
-        dfd=dfd.loc[(dfd[i]>dfd[i].quantile(0.25)-1.5*IQR)&(dfd[i]<dfd[i].quantile(0.75)+1.5*IQR),:]
-    dfd=dfd.reset_index()
-    return dfd
+    y_vals_scaled = scaler_y.fit_transform(X[1,:].reshape(-1, 1)).flatten()
+    x_vals_scaled = scaler_x.fit_transform(X[0,:].reshape(-1, 1)).flatten()  # Flatten per curve_fit
+    z_vals_scaled = scaler_z.fit_transform(X[2,:].reshape(-1, 1)).flatten()
 
-def pretreatment_linegroup_from_json(df):
-    """
-    Preprocess and clean the parameters data for line groups from a DataFrame.
+    X_scaled = np.array([x_vals_scaled, y_vals_scaled, z_vals_scaled])
 
-    This function performs outlier removal on the DataFrame using the interquartile range (IQR) method.
-    It processes the columns 'a0', 'a1', and 'a2', and removes rows where the values fall outside of
-    1.5 times the IQR from the first and third quartiles. The cleaned DataFrame is then returned for
-    further analysis.
+    return X_scaled,scaler_x,scaler_y,scaler_z
 
-    Parameters:
-    df (pd.DataFrame): A DataFrame containing the parameters for different line groups, including columns
-                    such as 'a0', 'a1', and 'a2'.
-    Returns:
-    pd.DataFrame: A cleaned DataFrame containing the parameters for different line groups, with
-                outliers removed and indices reset.
-    """
-    dfd=df.dropna().copy()
-    for i in  [  'a0', 'a1', 'a2']:
-        IQR=dfd[i].quantile(0.75)-dfd[i].quantile(0.25)
-        dfd=dfd.loc[(dfd[i]>dfd[i].quantile(0.25)-1.5*IQR)&(dfd[i]<dfd[i].quantile(0.75)+1.5*IQR),:]
-    dfd=dfd.reset_index()
-    return dfd
 
 #### ROTATION FUNCTIONS ####
 
@@ -254,7 +96,7 @@ def rotate_points(points, extremos_values):
     tuple: The rotation matrix and the rotated points.
     """
 
-    points = np.array(points).T
+    points = np.array(points)
 
     extremo1 = np.array(extremos_values).T[0]  # Extremo superior del primer poste
     extremo2 = np.array(extremos_values).T[2]  # Extremo inferior del primer poste
@@ -276,7 +118,7 @@ def rotate_points(points, extremos_values):
                                 [-s, c, 0],
                                 [0, 0, 1]])
 
-    rotated_points = matriz_rotacion.dot(points.T)
+    rotated_points = matriz_rotacion.dot(points)
     # print(rotated.shape)
 
     return matriz_rotacion, np.array(rotated_points)
@@ -317,14 +159,15 @@ def rotate_vano(cond_values, extremos_values, apoyo_values, vert_values):
     """
     
     logger.info(f"Rotating vano")
+    
     # Rotate and compare
     mat, rotated_conds = rotate_points(cond_values, extremos_values)
-
     rotated_apoyos = mat.dot(apoyo_values)
     rotated_extremos = mat.dot(extremos_values)
     rotated_vertices = [mat.dot(vert) for vert in vert_values]
 
     return mat,rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos
+
 
 #### OUTLIER FUNCTIONS ####
 
@@ -415,7 +258,7 @@ def clean_outliers(rotated_conds, rotated_extremos):
     if threshold_y_lower is not None:
         cropped_conds = cropped_conds[:, cropped_conds[1, :] < threshold_y_lower]
         
-    print(f"Shape 2: {cropped_conds.shape}")
+    # print(f"Shape 2: {cropped_conds.shape}")
     
     # # Calcular percentiles 1 y 99
     # p1 = np.percentile(cropped_conds[1, :], 2)
@@ -461,6 +304,198 @@ def clean_outliers_2(rotated_conds):
     rotated_conds=rotated_conds[:,(rotated_conds[2,:]>lz-1.5*(uz-lz))&(rotated_conds[2,:]<uz+1.5*(uz-lz))]
 
     return rotated_conds
+
+
+############################ NOT IN RELEASE #########################################
+
+def get_bad_data(pathdata):
+    
+    bad_ids = get_bad_ids(pathdata.split("json")[0]+"txt")
+
+    with open(pathdata, 'r') as archivo:
+        data = json.load(archivo)
+        
+    # print(len(data), bad_ids)
+
+    bad_data_df = extract_preprocess_errors(data, bad_ids)
+
+    bad_data = [data[i] for i in bad_data_df["num"]]
+
+    return bad_data_df, bad_data
+
+def extract_preprocess_errors(data, bad_ids):
+
+    succeed_preprocess = []
+    failed_preprocess = []
+    errors = []
+    num = []
+
+    for i in range(len(data)):
+        
+        print(f"\nProcessing Vano {i}")
+        
+        vano_id = data[i]['ID_VANO']
+        
+        # if vano_id in bad_ids:
+        #     print("Vano skiped ", i)
+        #     continue
+        
+        try:
+            
+            cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
+            rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
+            succeed_preprocess.append(vano_id)
+            
+        except Exception as e:
+            
+            failed_preprocess.append(vano_id)
+            errors.append(e)
+            num.append(i)
+            print(f"Vano {vano_id} failed preprocess: {e}")
+            
+# def get_new_extreme_values(data):
+
+#     nuevos_extremos = []
+#     nuevos_extremos_ids = []
+#     un_apoyo_ids = []
+
+#     for i in range(len(data)):
+        
+#         print(f"\nProcessing vano {i}")
+        
+#         cond_values, apoyo_values, vert_values, extremos_values = extract_vano_values(data, i)
+
+#         print(f"We lack of extreme values: {len(extremos_values[2]) != 4}")
+        
+#         # Standard scaling
+#         scaler = StandardScaler()
+#         scaled_points = scaler.fit_transform(np.array(apoyo_values))
+        
+#         labels, centroids = kmeans_clustering(scaled_points, 2, 500)
+        
+#         points = scaler.inverse_transform(scaled_points)
+        
+#         extremos = []
+
+#         for lab in np.unique(labels):
+
+#             apoyo = points[:, labels == lab]
+
+#             mean_x = np.mean(apoyo[0,:])
+#             mean_y = np.mean(apoyo[1,:])
+#             mean_z = np.mean(apoyo[2,:])
+            
+#             c_mass = np.array([mean_x, mean_y, mean_z])
+#             extremos.append(c_mass)
+        
+
+#         dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[1,:])
+#         extremos = np.array(extremos).T
+        
+#         print(f"Distance between mean points: {dist}")
+#         # print(f"New extreme values: {extremos}")
+        
+#         if 100*abs(dist - data[i]["LONGITUD_2D"])/data[i]["LONGITUD_2D"] > 10.0:
+            
+#             print(f"Proportional absolut error of distance = {100*abs(dist - data[i]['LONGITUD_2D'])/data[i]['LONGITUD_2D']}")
+#             print("SOLO HAY 1 APOYO")
+            
+#             plt.scatter(points[0], points[1], c=labels, cmap='viridis', s=1)
+#             plt.scatter(extremos[0,:], extremos[1,:], s = 10, color = "blue")
+#             # plt.vlines(centroids, ymin=np.min(points[1]), ymax=np.max(points[1]), color='red')
+#             plt.title('Custom 1D K-means Clustering')
+#             plt.xlabel('X Coordinate')
+#             plt.ylabel('Y Coordinate')
+#             plt.show()
+                
+#             # plot_data("test",cond_values, apoyo_values, vert_values, extremos)
+            
+#             un_apoyo_ids.append(data[i]["ID_VANO"])
+#             continue
+        
+#         nuevos_extremos.append(extremos)
+#         nuevos_extremos_ids.append(data[i]["ID_VANO"])
+#         # plot_data("test",cond_values, apoyo_values, vert_values, extremos)
+#     return np.array(nuevos_extremos), nuevos_extremos_ids, un_apoyo_ids
+
+
+def mod_extremos(data,new_extremos,ids):
+    
+    for id in ids:
+        
+        idx, vano = look_for_vano(data,id)
+        new_apoyos = []
+        
+        for j in range(2):
+            
+            new_apoyos.append({"COORDENADA_X": list(new_extremos[0,j]), "COORDENADA_Y": list(new_extremos[1,j]), "COORDENADAS_Z": list(new_extremos[2,j])})
+        # print(vano["APOYOS"])
+        vano['APOYOS'] = new_apoyos
+        # print(new_apoyos)
+        data[idx] = vano
+            
+    return data
+
+#### FUNCTIONS TO TRANSFORM/PREPROCESS 3D POINTS ####
+
+def random_sampling(point_cloud, num_points):
+    logger.debug(f"random sampling for: {num_points}")
+    if point_cloud.shape[1] <= num_points:
+        return point_cloud
+    indices = np.random.choice(int(point_cloud.shape[1]), int(num_points), replace=False)
+    return point_cloud[:, indices]
+
+
+def pretreatment_linegroup(parameters):
+    """
+    Preprocess and clean the parameters data for line groups.
+
+    This function flattens the list of parameters, converts it into a DataFrame, and performs
+    outlier removal using the interquartile range (IQR) method. The cleaned DataFrame is then
+    returned for further analysis.
+
+    Parameters:
+    parameters (list): A list of parameters for different line groups, where each sublist contains
+                    the parameters for a single line group.
+
+    Returns:
+    pd.DataFrame: A cleaned DataFrame containing the parameters for different line groups, with
+                outliers removed and indices reset.xº
+    """
+    flattened_data = [flatten_sublist(sublist) for sublist in parameters]
+    columns = ['ID', 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']
+    df = pd.DataFrame(flattened_data, columns=columns)
+    dfd=df.dropna().copy()
+    for i in  [ 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3']:
+
+        IQR=dfd[i].quantile(0.75)-dfd[i].quantile(0.25)
+        dfd=dfd.loc[(dfd[i]>dfd[i].quantile(0.25)-1.5*IQR)&(dfd[i]<dfd[i].quantile(0.75)+1.5*IQR),:]
+    dfd=dfd.reset_index()
+    return dfd
+
+def pretreatment_linegroup_from_json(df):
+    """
+    Preprocess and clean the parameters data for line groups from a DataFrame.
+
+    This function performs outlier removal on the DataFrame using the interquartile range (IQR) method.
+    It processes the columns 'a0', 'a1', and 'a2', and removes rows where the values fall outside of
+    1.5 times the IQR from the first and third quartiles. The cleaned DataFrame is then returned for
+    further analysis.
+
+    Parameters:
+    df (pd.DataFrame): A DataFrame containing the parameters for different line groups, including columns
+                    such as 'a0', 'a1', and 'a2'.
+    Returns:
+    pd.DataFrame: A cleaned DataFrame containing the parameters for different line groups, with
+                outliers removed and indices reset.
+    """
+    dfd=df.dropna().copy()
+    for i in  [  'a0', 'a1', 'a2']:
+        IQR=dfd[i].quantile(0.75)-dfd[i].quantile(0.25)
+        dfd=dfd.loc[(dfd[i]>dfd[i].quantile(0.25)-1.5*IQR)&(dfd[i]<dfd[i].quantile(0.75)+1.5*IQR),:]
+    dfd=dfd.reset_index()
+    return dfd
+
 
 def clean_outliers_3(cropped_conds):
     """
@@ -512,37 +547,6 @@ def clean_outliers_4(cropped_conds):
     return cropped_conds
 
 #### SCALE FUNCTIONS ####
-
-def scale_vertices(rotated_vertices, scaler_x, scaler_y, scaler_z):
-    
-    scaled_vertices = [np.array([scaler_x.fit_transform(vert[0,:].reshape(-1, 1)), scaler_y.fit_transform(vert[1,:].reshape(-1, 1)), scaler_z.fit_transform(vert[2,:].reshape(-1, 1))]) for vert in rotated_vertices]
-    return scaled_vertices
-
-def scale_conductor(X):
-    """
-    Scale the x, y, and z coordinates of the conductor points using standard scaling.
-
-    Parameters:
-    X (numpy.ndarray): The x, y, and z coordinates of the conductor points.
-
-    Returns:
-    numpy.ndarray: The scaled x, y, and z coordinates.
-    """
-    
-    logger.info(f"Scaling conductor")
-    # Normalizzazione dei valori di x e y
-    scaler_y = StandardScaler()
-    scaler_x = StandardScaler()
-    scaler_z = StandardScaler()
-
-    y_vals_scaled = scaler_y.fit_transform(X[1,:].reshape(-1, 1)).flatten()
-    x_vals_scaled = scaler_x.fit_transform(X[0,:].reshape(-1, 1)).flatten()  # Flatten per curve_fit
-    z_vals_scaled = scaler_z.fit_transform(X[2,:].reshape(-1, 1)).flatten()
-
-    X_scaled = np.array([x_vals_scaled, y_vals_scaled, z_vals_scaled])
-
-    return X_scaled,scaler_x,scaler_y,scaler_z
-
 
 def un_scale_conductor(X,scaler_x,scaler_y,scaler_z):
     """
@@ -620,125 +624,3 @@ def data_middlepoints(data):
     X=pd.DataFrame({'ids':ids,'x':x.flatten(),'y':y.flatten()})
 
     return ids_bad_backing,X
-
-def define_backings(vano_length, apoyo_values, coord):
-    """
-    Define the backings (extremos) based on the length of the span and the coordinates of the supports.
-
-    This function clusters the support coordinates into two groups using k-means clustering, calculates
-    the center of mass for each group, and determines the coordinates of the backings. If the distance
-    between the centroids of the clusters significantly deviates from the provided span length, the
-    function returns -1 indicating an error.
-
-    Parameters:
-    vano_length (float): The length of the span (vano).
-    apoyo_values (list of lists or numpy.ndarray): The x, y, and z coordinates of the supports.
-
-    Returns:
-    list: A list containing three numpy arrays representing the x, y, and z coordinates of the backings
-        for each support. If the distance between centroids deviates significantly from the span length,
-        returns -1.
-    """
-    
-    logger.warning(f"Redefining backings")
-    
-    points = np.array(apoyo_values)
-    
-    labels, centroids = kmeans_clustering(points, 2, 100, coord)
-            
-    apoyos = []
-    extremos = []
-
-    for lab in np.unique(labels):
-
-        apoyo = np.array(apoyo_values)[:, labels == lab]
-
-        mean_x = np.mean(apoyo[0,:])
-        mean_y = np.mean(apoyo[1,:])
-        max_z = np.max(apoyo[2,:])
-        min_z = np.min(apoyo[2,:])
-        
-        c_mass1 = np.array([mean_x, mean_y, min_z])
-        c_mass2 = np.array([mean_x, mean_y, max_z])
-        
-        extremos.append(c_mass1)
-        extremos.append(c_mass2)
-        
-        apoyos.append(apoyo)
-
-    
-    dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
-    extremos = np.array(extremos)
-    
-    if 100*abs(dist - vano_length)/vano_length > 20.0:
-    
-        logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
-        logger.trace(f"Vano length, distance {vano_length, dist}")
-        logger.trace(f"Invertir coordenadas")
-        
-        if coord == 0:
-            coord = 1
-        else:
-            coord = 0
-            
-        labels, centroids = kmeans_clustering(points, 2, 100, coord)
-                
-        apoyos = []
-        extremos = []
-
-        for lab in np.unique(labels):
-
-            apoyo = np.array(apoyo_values)[:, labels == lab]
-
-            mean_x = np.mean(apoyo[0,:])
-            mean_y = np.mean(apoyo[1,:])
-            max_z = np.max(apoyo[2,:])
-            min_z = np.min(apoyo[2,:])
-            
-            c_mass1 = np.array([mean_x, mean_y, min_z])
-            c_mass2 = np.array([mean_x, mean_y, max_z])
-            
-            extremos.append(c_mass1)
-            extremos.append(c_mass2)
-            
-            apoyos.append(apoyo)
-            
-        dist = np.linalg.norm(np.array(extremos)[0,:] - np.array(extremos)[2,:])
-        extremos = np.array(extremos)
-
-        if 100*abs(dist - vano_length)/vano_length > 20.0:
-
-            logger.trace(f"Proportional absolut error of distance = {100*abs(dist - vano_length)/vano_length}")
-            logger.trace(f"Vano length, distance {vano_length, dist}")
-            logger.warning("SOLO HAY 1 APOYO")
-            
-            if coord == 0:
-                coord1, coord2 = 1, 2
-            else:
-                coord1, coord2 = 0, 2
-            
-            # plt.figure(figsize=(12,8))
-            # plt.subplot(121)
-            # plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
-            # plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
-            # plt.xlabel('X Coordinate')
-            # plt.ylabel('Y Coordinate')
-            # plt.subplot(122)
-            # plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
-            # plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
-            # plt.xlabel('X Coordinate')
-            # plt.ylabel('Z Coordinate')
-            # plt.title(f'Custom 1D K-means Clustering for coord {coord}')
-        
-            # plt.show()
-            
-            return -1
-                        
-    # z_vals = np.stack([np.array(extremos)[0,2], np.array(extremos)[1,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
-    z_vals = np.stack([np.array(extremos)[2,2], np.array(extremos)[3,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
-    y_vals =  np.stack([np.array(extremos)[2,1], np.array(extremos)[3,1], np.array(extremos)[0,1], np.array(extremos)[1,1]])
-    x_vals =  np.stack([np.array(extremos)[2,0], np.array(extremos)[3,0], np.array(extremos)[0,0], np.array(extremos)[1,0]])
-    
-    extremos_values = [x_vals, y_vals, z_vals]
-        
-    return list(extremos_values)

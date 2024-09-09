@@ -8,8 +8,10 @@ class Apoyo(BaseModel):
     OBJECTID_APOYO_3D: int
     COD_APOYO: str
     COORDENADA_X: float
-    COORDEANDA_Y: float
+    COORDENADA_Y: float = Field(..., alias="COORDEANDA_Y")
     COORDENADAS_Z: List[float]
+
+    model_config = {"populate_by_name": True}
 
 
 class Conductor(BaseModel):
@@ -31,15 +33,19 @@ class Vano(BaseModel):
     ID_VANO: str
     LONGITUD_2D: float
     COORDENADA_X_INICIO: float
-    COORDENADA_Y_INICIO: float
+    COORDENADA_Y_INICIO: float = Field(..., alias="COORDEANDA_Y_INICIO")
     COORDENADA_X_FIN: float
-    COORDEANDA_Y_FIN: float
+    COORDENADA_Y_FIN: float = Field(..., alias="COORDEANDA_Y_FIN")
     APOYOS: List[Apoyo]
     CONDUCTORES: List[Conductor]
     LIDAR: Lidar
 
-    model_config = {"json_schema_extra": {"examples": [VANO_JSON_EXAMPLE]}}
+    model_config = {
+        "populate_by_name": True,
+        "json_schema_extra": {"examples": [VANO_JSON_EXAMPLE]},
+    }
 
+    # The to_dict method is commented out, but I'll leave it here in case you want to uncomment and use it later
     # def to_dict(self):
     #     return {
     #         "OBJECTID_VANO_2D": self.OBJECTID_VANO_2D,
@@ -48,7 +54,7 @@ class Vano(BaseModel):
     #         "COORDENADA_X_INICIO": self.COORDENADA_X_INICIO,
     #         "COORDENADA_Y_INICIO": self.COORDENADA_Y_INICIO,
     #         "COORDENADA_X_FIN": self.COORDENADA_X_FIN,
-    #         "COORDEANDA_Y_FIN": self.COORDEANDA_Y_FIN,
+    #         "COORDENADA_Y_FIN": self.COORDENADA_Y_FIN,
     #         "APOYOS": [apoyo.model_dump() for apoyo in self.APOYOS],
     #         "CONDUCTORES": [conductor.model_dump() for conductor in self.CONDUCTORES],
     #         "LIDAR": self.LIDAR.model_dump(),

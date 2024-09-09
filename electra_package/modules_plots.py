@@ -1,8 +1,7 @@
 
 import plotly.graph_objects as go
 import matplotlib.pyplot as plt
-from electra_package.modules_preprocess import *
-# from notebooks.old_modules.modules_main import *
+import pandas as pd
 import numpy as np
 
 #### FUNCTIONS TO PLOT DATA AND FITS ####
@@ -133,7 +132,7 @@ def plot_fit_2(title,cond_values, apoyo_values, vert_values,fit):
     # Muestra el gráfico
     fig.show()
 
-def plot_data(title,cond_values, apoyo_values, vert_values=None, extremos_values=None):
+def plot_data(title,cond_values=[], apoyo_values=[], vert_values=[], extremos_values=[], color="red"):
     """
     Create and display a 3D scatter plot with conductors, supports, vertices, and endpoints.
 
@@ -158,20 +157,23 @@ def plot_data(title,cond_values, apoyo_values, vert_values=None, extremos_values
         name='Conductores'  # Nombre de la traza de los conductores
     )])
 
-    # Agrega el gráfico para los apoyos
-    add_plot(fig, apoyo_values, "orange", 2.5, "Apoyos", "markers")
+    if len(apoyo_values) != 0:
+
+        # Agrega el gráfico para los apoyos
+        add_plot(fig, apoyo_values, "orange", 2.5, "Apoyos", "markers")
     
-    if extremos_values != None:
+    if len(extremos_values) != 0:
 
         # Agrega el gráfico para los extremos
         add_plot(fig, extremos_values, "black", 5, "Extremos", "markers")
 
-    if vert_values != None:
+    if len(vert_values) != 0:
             
         for vert in vert_values:
-
+        
             # Agrega el gráfico para los vertices
-            add_plot(fig, vert , "red", 5, "Vertices", "lines")
+            add_plot(fig, vert , color, 4, "Vertices", "lines")
+            add_plot(fig, vert , color, 3, "Vertices", "markers")
 
     # Agrega títulos a los ejes
     fig.update_layout(
