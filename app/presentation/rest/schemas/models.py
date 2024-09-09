@@ -29,6 +29,7 @@ class Lidar(BaseModel):
 
 
 class Vano(BaseModel):
+    ID_LINEA: str
     OBJECTID_VANO_2D: int
     ID_VANO: str
     LONGITUD_2D: float
