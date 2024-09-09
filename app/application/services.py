@@ -11,7 +11,7 @@ from app.domain.exceptions.file_exceptions import InvalidFileFormatException
 from app.application.interfaces import LineaDataService, LineaPredictService
 from app.application.interfaces import VanoRepository
 
-from electra_package.prerelease_2 import process_vano
+from electra_package.release_2 import process_vano
 
 
 # Data Service
