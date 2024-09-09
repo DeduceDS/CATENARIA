@@ -83,7 +83,6 @@ def process_vano(vano, plot_signal=False):
             
         ###############################################
 
-        # mat, rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
         initial_conductor_number, expected_conductor_number, empty_poli = (
             analyze_polilinia_values(vert_values, cond_values, vano_length)
         )
@@ -298,7 +297,7 @@ def process_vano(vano, plot_signal=False):
 
             #######################################
 
-            pols, params, metrics = fit_and_evaluate_conds(clusters, scaled_extremos)
+            pols, params, metrics = fit_and_evaluate_conds(clusters, scaled_extremos, plot_signal)
 
             pols = unscale_fits(
                 pols, scaler_x, scaler_y, scaler_z
@@ -318,25 +317,27 @@ def process_vano(vano, plot_signal=False):
 
             fit1, fit2, fit3 = stack_unrotate_fits(pols, mat)
             _, conds = un_rotate_points(conds, mat)
+            
+            # if plot_signal:
 
-            # plt.hist(conds[0,:], bins = 25)
-            # plt.show()
+            #     # plt.hist(conds[0,:], bins = 25)
+            #     # plt.show()
 
-            # plt.hist(fit1[0,:], bins = 25)
-            # plt.hist(fit2[0,:], bins = 25)
-            # plt.hist(fit3[0,:], bins = 25)
-            # plt.show()
+            #     # plt.hist(fit1[0,:], bins = 25)
+            #     # plt.hist(fit2[0,:], bins = 25)
+            #     # plt.hist(fit3[0,:], bins = 25)
+            #     # plt.show()
 
-            # plt.figure(figsize=(12,8))
-            # plt.subplot(1,2,1)
-            # plt.scatter(fit1[1,:], fit1[2,:], s = 5, color = "red")
-            # plt.scatter(fit2[1,:], fit2[2,:], s = 5, color = "blue")
-            # plt.scatter(fit3[1,:], fit3[2,:], s = 5, color = "green")
-            # plt.subplot(1,2,2)
-            # plt.scatter(fit1[1,:], fit1[0,:], s = 5, color = "red")
-            # plt.scatter(fit2[1,:], fit2[0,:], s = 5, color = "blue")
-            # plt.scatter(fit3[1,:], fit3[0,:], s = 5, color = "green")
-            # plt.show()
+            #     # plt.figure(figsize=(12,8))
+            #     # plt.subplot(1,2,1)
+            #     # plt.scatter(fit1[1,:], fit1[2,:], s = 5, color = "red")
+            #     # plt.scatter(fit2[1,:], fit2[2,:], s = 5, color = "blue")
+            #     # plt.scatter(fit3[1,:], fit3[2,:], s = 5, color = "green")
+            #     # plt.subplot(1,2,2)
+            #     # plt.scatter(fit1[1,:], fit1[0,:], s = 5, color = "red")
+            #     # plt.scatter(fit2[1,:], fit2[0,:], s = 5, color = "blue")
+            #     # plt.scatter(fit3[1,:], fit3[0,:], s = 5, color = "green")
+            #     # plt.show()
 
             fits = [fit1, fit2, fit3]
 
@@ -351,7 +352,7 @@ def process_vano(vano, plot_signal=False):
             plt.show()
 
             response_vano = puntuate_and_save(
-                response_vano, fit1, fit2, fit3, params, metrics, n_conds
+                response_vano, fit1, fit2, fit3, params
             )
 
             # logger.critical(f"Puntuaciones aposteriori: {response_vano['PUNTUACION_APOSTERIORI']}")

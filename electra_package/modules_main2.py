@@ -532,7 +532,7 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     for g in range(0, k):
 
         l0 = X_scaled[:, filt[g]].shape[1]
-        # fl=pd.Series(X_scaled[2,filt[g]]).var()-pd.Series(X_scaled[0,filt[g]]).var()
+
         centroids0, labels0 = (
             dbscan_find_clusters_3(X_scaled[:, filt[g]])
             if l0 > thresh_value
@@ -552,21 +552,16 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
 
     logger.debug(f"{ncl}, {centroids0}, {max_vars}")
 
-    ##########################################
-    # Obtain the mode of n_clusters along the list of size 10 == number of conductors
+    ########################################### Obtain the mode of max variance for 10 segments
     mvar = mode(max_vars)
 
     logger.critical(f"Variances: {max_vars}")
     logger.critical(f"Max variance from mode: {mvar}")
 
-    ##########################################
-    # Obtain the mode of n_clusters along the list of size 10 == number of conductors
+    ########################################### Obtain the mode of n_clusters along the list of size 10 
     md = mode([v for v in ncl if v != 0])
 
     logger.success(f"Number of lines from mode: {md}")
-
-    # Do the same for the x vs z variance relation
-    # var_z_x=mode(greater_var_z_than_x)
 
     # Compute the number of empty fragments
     num_empty = np.array([l0 < thresh_value for l0 in l]).sum()
@@ -588,7 +583,10 @@ def extract_conductor_config(X_scaled, rotated_extremos, cropped_conds):
     return num_empty, finc[0], md, mvar
 
 
-def fit_and_evaluate_conds(clusters, scaled_extremos):
+def fit_and_evaluate_conds(clusters, scaled_extremos, plot_signal):
+    
+    if plot_signal:
+        plt.figure(figsize=(12,8))
 
     logger.info(f"Fitting with catenaria function")
 
@@ -606,7 +604,6 @@ def fit_and_evaluate_conds(clusters, scaled_extremos):
     metrics_vano = []
 
     logger.info(f"Interquartile filtering prefit")
-    # plt.figure(figsize=(12,8))
 
     for l, clus in enumerate(clusters):
 
@@ -629,33 +626,29 @@ def fit_and_evaluate_conds(clusters, scaled_extremos):
         pols.append([x_pol, y_pol, z_pol])
         params.append(parametros)
         metrics_vano.append(metrics_cond)
+        
+        if plot_signal:
 
-        # plt.subplot(2,3,l+1)
-        # plt.scatter(clus[1,:], clus[2,:])
-        # plt.scatter(y_pol, z_pol)
-        # plt.scatter(scaled_extremos[1,:], scaled_extremos[2,:])
+            plt.subplot(2,3,l+1)
+            plt.scatter(clus[1,:], clus[2,:])
+            plt.scatter(y_pol, z_pol)
+            plt.scatter(scaled_extremos[1,:], scaled_extremos[2,:])
 
-        # plt.subplot(2,3,l+4)
-        # plt.scatter(clus[1,:], clus[0,:])
-        # plt.scatter(y_pol, x_pol)
-        # plt.scatter(scaled_extremos[1,:], scaled_extremos[0,:])
+            plt.subplot(2,3,l+4)
+            plt.scatter(clus[1,:], clus[0,:])
+            plt.scatter(y_pol, x_pol)
+            plt.scatter(scaled_extremos[1,:], scaled_extremos[0,:])
 
-        # plt.title(f"Fit for cluster: {l}")
-        # # logger.debug(f"Min z value, max z value {np.min(z_pol)}, {np.max(z_pol)}")
-        # logger.debug(f"Min z value, max z value {np.min(clus[2,:])}, {np.max(clus[2,:])}")
-        # # logger.debug(f"Min y value, max y value {np.min(y_pol)}, {np.max(y_pol)}")
-        # logger.debug(f"Min y value, max y value {np.min(clus[1,:])}, {np.max(clus[1,:])}")
+            plt.title(f"Fit for cluster: {l}")
 
     plt.show()
 
     logger.info(f"Evaluating fits")
 
-    # resultados_eval = evaluar_ajuste(y_pols, z_pols, rotated_vertices, vano_length, clusters)
-
     return np.array(pols), params, metrics_vano
 
 
-def puntuate_and_save(response_vano, fit1, fit2, fit3, params, metrics, n_conds):
+def puntuate_and_save(response_vano, fit1, fit2, fit3, params):
 
     logger.success(f"Saving results")
     logger.success(f"Setting vano score with new puntuation function")
