@@ -252,41 +252,35 @@ def process_vano(vano):
                 else:
                     coord = 0
 
-            for n_conds in range(3, max_conds):
+            logger.success(f"Kmeans clustering for {n_conds} clusters config {coord}")
 
-                logger.success(f"Kmeans clustering for {n_conds} clusters config {p}")
+            good_clust, clusters = cluster_and_evaluate(X_scaled, n_conds, coord)
 
-                good_clust, clusters = cluster_and_evaluate(X_scaled, n_conds, coord)
+            if good_clust:
 
-                if good_clust:
+                if n_conds == md:
+                    logger.critical(f"Conductor number confirmation for {md} lines")
+                    response_vano["NUM_CONDUCTORES"] = int(md)
+                    response_vano["NUM_CONDUCTORES_FIABLE"] = True
+                    break
 
-                    if n_conds == md:
-                        logger.critical(f"Conductor number confirmation for {md} lines")
-                        response_vano["NUM_CONDUCTORES"] = int(md)
-                        response_vano["NUM_CONDUCTORES_FIABLE"] = True
-                        break
+                elif coord == 0:
+                    response_vano["NUM_CONDUCTORES"] = int(n_conds)
+                    response_vano["NUM_CONDUCTORES_FIABLE"] = False
+                    logger.warning(
+                        "Horizontal clustering cond number not confirmed"
+                    )
+                    break
 
-                    elif coord == 0 and n_conds == 3 and md not in [6, 7]:
-                        response_vano["NUM_CONDUCTORES"] = int(n_conds)
-                        response_vano["NUM_CONDUCTORES_FIABLE"] = False
-                        logger.warning(
-                            "Horizontal clustering cond number not confirmed"
-                        )
-                        break
+                elif coord != 0:
+                    response_vano["NUM_CONDUCTORES"] = int(n_conds)
+                    response_vano["NUM_CONDUCTORES_FIABLE"] = False
+                    logger.warning("Vertical clustering cond number not confirmed")
+                    break
 
-                    elif coord != 0 and n_conds == 3 and md in [6, 7]:
-                        response_vano["NUM_CONDUCTORES"] = int(n_conds)
-                        response_vano["NUM_CONDUCTORES_FIABLE"] = False
-                        logger.warning("Vertical clustering cond number not confirmed")
-                        break
-
-                    elif n_conds != 3:
-                        good_clust = False
-                        continue
-
-                    else:
-                        good_clust = False
-                        break
+                else:
+                    good_clust = False
+                    break
 
         ############################################### FIT CLUSTERS
 
