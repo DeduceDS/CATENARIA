@@ -11,10 +11,7 @@ class Apoyo(BaseModel):
     COORDENADA_Y: float = Field(..., alias="COORDEANDA_Y")
     COORDENADAS_Z: List[float]
 
-    model_config = {
-        "populate_by_name": True,
-        "allow_population_by_field_name": True,
-    }
+    model_config = {"populate_by_name": True}
 
 
 class Conductor(BaseModel):
@@ -45,7 +42,6 @@ class Vano(BaseModel):
 
     model_config = {
         "populate_by_name": True,
-        "allow_population_by_field_name": True,
         "json_schema_extra": {"examples": [VANO_JSON_EXAMPLE]},
     }
 
