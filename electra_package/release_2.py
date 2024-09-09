@@ -340,16 +340,18 @@ def process_vano(vano, plot_signal=False):
             #     # plt.show()
 
             fits = [fit1, fit2, fit3]
+            
+            if plot_signal:
 
-            plot_data(
-                "Deduce", cond_values, apoyo_values, fits, extremos_values, "green"
-            )
-            plt.show()
+                plot_data(
+                    "Deduce", cond_values, apoyo_values, fits, extremos_values, "green"
+                )
+                plt.show()
 
-            plot_data(
-                "CIC", cond_values, apoyo_values, vert_values, extremos_values, "red"
-            )
-            plt.show()
+                plot_data(
+                    "CIC", cond_values, apoyo_values, vert_values, extremos_values, "red"
+                )
+
 
             response_vano = puntuate_and_save(
                 response_vano, fit1, fit2, fit3, params

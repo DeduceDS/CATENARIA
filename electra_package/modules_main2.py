@@ -469,13 +469,13 @@ def cluster_and_evaluate(X_scaled, n_conds, coord):
 
             if len(overlapping_clusters) == 0:
                 logger.success(f"GOOD CLUSTERS: found {n_conds}")
-                plot_clusters(X_scaled, labels, centroids, coord)
+                # plot_clusters(X_scaled, labels, centroids, coord)
                 good_clust = True
                 return good_clust, clusters
 
             else:
                 logger.warning("OVERLAPPING CLUSTERS")
-                plot_clusters(X_scaled, labels, centroids, coord)
+                # plot_clusters(X_scaled, labels, centroids, coord)
                 # good_clust = False
                 return good_clust, clusters
 
