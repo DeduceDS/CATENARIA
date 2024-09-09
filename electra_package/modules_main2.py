@@ -97,20 +97,9 @@ def analyze_polilinia_values(vert_values, cond_values, vano_length):
     return initial_conductor_number, expected_conductor_number, empty_poli
 
 
-def analyze_backings(vano_length, apoyo_values, extremos_values):
+def analyze_backings(vano_length, apoyo_values, extremos_values, plot_signal):
 
     logger.info(f"Analyzing backings")
-
-    # scaled_apoyos,scaler_x,scaler_y,scaler_z = scale_conductor(apoyo_values)
-    # scaled_apoyos = clean_outliers_2(scaled_apoyos)
-
-    # clusters, noise_cluster = extract_n_clusters(scaled_apoyos)
-
-    # if noise_cluster != 0:
-    #     logger.critical(f"Found noise in backings!")
-    # if len(clusters) == 3:
-    #     logger.critical(f"Found {len(clusters)} backings!")
-    #     return -1
 
     logger.trace(
         f"Variance distribution in backings {np.std(apoyo_values[0,:]), np.std(apoyo_values[1,:])}"
@@ -121,7 +110,7 @@ def analyze_backings(vano_length, apoyo_values, extremos_values):
     logger.debug(f"Max variance coordinate for backings {coord}")
 
     # Redefine and compute new extreme values
-    extremos_values = define_backings(vano_length, apoyo_values, coord)
+    extremos_values = define_backings(vano_length, apoyo_values, coord, plot_signal)
 
     # Check for missing LIDAR apoyo points
     # Exception to handle = bad data , correction not possible
@@ -130,18 +119,17 @@ def analyze_backings(vano_length, apoyo_values, extremos_values):
         # Include flag of bad extreme values
         # Set the line value of this element as 0 ****
         logger.warning("NO HAY 2 APOYOS LIDAR")
-        # plot_data(f"{idv}",cond_values, apoyo_values, vert_values, extremos_values)
+        
+        if plot_signal:
+            
+            plot_data("",[], apoyo_values, [], extremos_values)
 
         return -1
-
-    # Plot filter to plot bad cases?
-    # if any([plot_filter=='all',plot_filter=='bad_backing']):
-    # plot_vano(f'{idv} Bad_Backing',X_scaled,labels,cond_values, apoyo_values, vert_values, extremos_values)
 
     return list(extremos_values)
 
 
-def define_backings(vano_length, apoyo_values, coord):
+def define_backings(vano_length, apoyo_values, coord, plot_signal):
     """
     Define the backings (extremos) based on the length of the span and the coordinates of the supports.
 
@@ -168,9 +156,6 @@ def define_backings(vano_length, apoyo_values, coord):
 
     apoyos = []
     extremos = []
-
-    max_dist1 = 0
-    max_dist2 = 0
 
     for lab in np.unique(labels):
 
@@ -242,25 +227,26 @@ def define_backings(vano_length, apoyo_values, coord):
                 coord1, coord2 = 1, 2
             else:
                 coord1, coord2 = 0, 2
+                
+            if plot_signal:
 
-            # plt.figure(figsize=(12,8))
-            # plt.subplot(121)
-            # plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
-            # plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
-            # plt.xlabel('X Coordinate')
-            # plt.ylabel('Y Coordinate')
-            # plt.subplot(122)
-            # plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
-            # plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
-            # plt.xlabel('X Coordinate')
-            # plt.ylabel('Z Coordinate')
-            # plt.title(f'Custom 1D K-means Clustering for coord {coord}')
+                plt.figure(figsize=(12,8))
+                plt.subplot(121)
+                plt.scatter(points[coord], points[coord1], c=labels, cmap='viridis', s=1)
+                plt.vlines(centroids, ymin=np.min(points[coord1]), ymax=np.max(points[coord1]), color='red')
+                plt.xlabel('X Coordinate')
+                plt.ylabel('Y Coordinate')
+                plt.subplot(122)
+                plt.scatter(points[coord], points[coord2], c=labels, cmap='viridis', s=1)
+                plt.vlines(centroids, ymin=np.min(points[coord2]), ymax=np.max(points[coord2]), color='red')
+                plt.xlabel('X Coordinate')
+                plt.ylabel('Z Coordinate')
+                plt.title(f'Custom 1D K-means Clustering for coord {coord}')
 
-            # plt.show()
+                plt.show()
 
             return -1
 
-    # z_vals = np.stack([np.array(extremos)[0,2], np.array(extremos)[1,2], np.array(extremos)[0,2], np.array(extremos)[1,2]])
     z_vals = np.stack(
         [
             np.array(extremos)[2, 2],

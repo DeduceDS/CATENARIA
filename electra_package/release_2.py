@@ -34,7 +34,7 @@ from electra_package.modules_plots import *
 from electra_package.puntuacionparavano import puntuacion_apriori
 
 
-def process_vano(vano):
+def process_vano(vano, plot_signal=False):
 
     try:
 
@@ -66,11 +66,6 @@ def process_vano(vano):
             "DIFF2D": [],
             "NOTA": -99.0
         }
-        # response_vano["PUNTUACION_APOSTERIORI"] = {"P_VALUE": -99, "CORRELATION": -99.0, "RMSE" : -99.0, "NOTA" : -99.0}
-
-        # response_vano["PORCENTAJE_HUECOS"] = 0
-        # response_vano["ERROR_POLILINEA"] = 0
-        # response_vano["ERROR_CATENARIA"] = 0
 
         ###############################################
 
@@ -84,6 +79,8 @@ def process_vano(vano):
             "NOTA": -99.0
         }:
             response_vano["FLAG"] = "bad_backings"
+            
+            
         ###############################################
 
         # mat, rotated_conds, rotated_apoyos, rotated_vertices, rotated_extremos = rotate_vano(cond_values, extremos_values, apoyo_values, vert_values)
@@ -112,16 +109,14 @@ def process_vano(vano):
             }
 
             return response_vano, -1
+        
+        elif empty_poli == 0 and expected_conductor_number == 3:
+            logger.warning("3 non-empty catenaries, alternative fit possible...")
 
-        elif initial_conductor_number - empty_poli == 0:
+        elif expected_conductor_number == 0:
 
             logger.warning("No polilineas...")
             response_vano["FLAG"] = "no_polilineas"
-
-        elif empty_poli != 0:
-
-            # logger.warning(f"Empty polilinea = {empty_pol_num}")
-            response_vano["FLAG"] = "found_empty_polis"
 
         ################################################
 
@@ -139,13 +134,11 @@ def process_vano(vano):
             logger.error("Empty point cloud")
             response_vano["FLAG"] = "empty_cloud"
 
-            # response_vano["PUNTUACION_APRIORI"] = {"P_HUECO": -99, "DIFF2D": -99.0, "NOTA" : -99.0}
-
             return response_vano, -1
 
         ###############################################
 
-        extremos_values = analyze_backings(vano_length, apoyo_values, extremos_values)
+        extremos_values = analyze_backings(vano_length, apoyo_values, extremos_values, plot_signal)
 
         if extremos_values == -1:
 
@@ -153,8 +146,6 @@ def process_vano(vano):
             # Set the line value of this element as 0 ****
             logger.error(f"Bad backings")
             response_vano["FLAG"] = "bad_backings"
-
-            # response_vano["PUNTUACION_APRIORI"] = {"P_HUECO": -99, "DIFF2D": -99.0, "NOTA" : -99.0}
 
             return response_vano, -1
 
@@ -184,8 +175,9 @@ def process_vano(vano):
             [x_scaled_extremos, y_scaled_extremos, z_scaled_extremos]
         )
 
-        # plot_data("good fit", X_scaled, [], scaled_vertices, scaled_extremos, "blue")
-        # plt.show()
+        # if plot_signal:
+            # plot_data("good fit", X_scaled, [], scaled_vertices, scaled_extremos, "blue")
+            # plt.show()
 
         ############################################### SCALE CONDS AND POLILINEA
         print(X_scaled.shape)
