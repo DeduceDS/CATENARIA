@@ -62,9 +62,9 @@ def process_vano(vano):
         response_vano["COMPLETITUD"] = "None"
         response_vano["RECONSTRUCCION"] = ""
         response_vano["PUNTUACION_APRIORI"] = {
-            "P_HUECO": -99,
-            "DIFF2D": -99.0,
-            "NOTA": -99.0,
+            "P_HUECO": [],
+            "DIFF2D": [],
+            "NOTA": -99.0
         }
         # response_vano["PUNTUACION_APOSTERIORI"] = {"P_VALUE": -99, "CORRELATION": -99.0, "RMSE" : -99.0, "NOTA" : -99.0}
 
@@ -79,9 +79,9 @@ def process_vano(vano):
         )
 
         if response_vano["PUNTUACION_APRIORI"] == {
-            "P_HUECO": -99,
-            "DIFF2D": -99.0,
-            "NOTA": -99.0,
+            "P_HUECO": [],
+            "DIFF2D": [],
+            "NOTA": -99.0
         }:
             response_vano["FLAG"] = "bad_backings"
         ###############################################
@@ -106,9 +106,9 @@ def process_vano(vano):
             response_vano["FLAG"] = "bad_cond_number"
 
             response_vano["PUNTUACION_APRIORI"] = {
-                "P_HUECO": -99,
-                "DIFF2D": -99.0,
-                "NOTA": -99.0,
+                "P_HUECO": [],
+                "DIFF2D": [],
+                "NOTA": -99.0
             }
 
             return response_vano, -1
